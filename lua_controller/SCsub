@@ -1,0 +1,21 @@
+#!/usr/bin/env python
+# SCsub
+
+Import('env')
+
+# Only needs cloning if different compilation FLAGS will be used
+#module_env = env.Clone()
+
+#Module's source files
+src_list = ["register_types.cpp", "lua_controller.cpp"]
+env.add_source_files(env.modules_sources, src_list)
+
+## The libraries required to compile the module with LuaCpp
+# Lua's library name does not need the version number. That is because of how it was manually installed
+# No need to append LIBPATH=['/usr/local/lib'] (where the libraries were installed) because SCons already 
+# checks the folder by default.
+# LIBPATH will need appending if the libraries are installed elsewhere.
+env.Append(LIBS=['luacpp','lua','stdc++'])
+
+## Include directories for Lua and LuaCpp
+env.Append(CPPPATH=['/usr/local/include', '/usr/local/include/LuaCpp'])

@@ -2,7 +2,7 @@
  * @file lua_controller.h
  * @author Rodrigo Leite (you@domain.com)
  * @brief 
- * @version 0.1
+ * @version 0.2
  * @date 2021-11-19
  * 
  * @copyright Copyright (c) 2021
@@ -14,8 +14,12 @@
 #include "scene/main/node.h" /* Base Class for LuaController */
 #include "core/ustring.h" /* To use Godot's String class */
 
+#include <memory>
+#include <vector>
+
 #include <LuaCpp.hpp>
 #include "LuaControllerContext.hpp"
+#include "lua_callable.h"
 
 class LuaController : public Node {
 	GDCLASS(LuaController, Node);
@@ -39,6 +43,22 @@ class LuaController : public Node {
      * @brief Stores the error message describing the last Error code returned by a method.
      */
     String error_message;
+
+    /**
+     * @brief Vector of objects callable from Lua
+     * 
+     * When called during the execution of Lua code, they emit a Godot signal.
+     */
+    std::vector<std::shared_ptr<LuaCallable>> callables; 
+
+    /**
+     * @brief Dictionary of pairs {"signal to register" : "name to register as"}
+     * 
+     * The keys of this dictionary are which of this object's signals will be registered
+     * as LuaCallables inside a Context, and they're respective values are how they will 
+     * be named in the context (i.e. what variable the player will call)
+     */
+    Dictionary signals_to_register;
 protected:
     /**
      * @brief Binds a selection of methods and members on Godot's Class Database (ClassDB)
@@ -79,6 +99,15 @@ public:
     Error compile ();
 
     /**
+     * @brief Prepares a LuaCallable for each signal from signals_to_register
+     * 
+     * This needs to be called if the object's signals have changed.
+     * This method is connected to this objects "script_changed" signal.
+     * For each signal in signals_to_register, instances a LuaCallable and stores it in callables. 
+     */
+    void prepare_callables ();
+
+    /**
      * 
      * @brief Executes the compiled Lua code
      * 
@@ -111,6 +140,12 @@ public:
      * @return String 
      */
     String get_error_message ();
+
+    /**
+     * @brief Getter and Setter methods for signals_to_register
+     */
+    void set_signals_to_register (const Dictionary& dictionary);
+    Dictionary get_signals_to_register () const;
 
     /**
      * @brief Construct a new LuaController object

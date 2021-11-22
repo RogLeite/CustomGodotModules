@@ -15,6 +15,7 @@
 #include "core/ustring.h" /* To use Godot's String class */
 
 #include <LuaCpp.hpp>
+#include "LuaControllerContext.hpp"
 
 class LuaController : public Node {
 	GDCLASS(LuaController, Node);
@@ -27,13 +28,17 @@ class LuaController : public Node {
     /**
      * @brief Context where lua_code is compiled and run
      */
-    LuaCpp::LuaContext ctx;
+    LuaCpp::LuaControllerContext lua;
 
     /**
      * @brief Flag used by run() to decide if it tries to execute code
      */
-    Error compilation_succeded;
+    bool compilation_succeded;
 
+    /**
+     * @brief Stores the error message describing the last Error code returned by a method.
+     */
+    String error_message;
 protected:
     /**
      * @brief Binds a selection of methods and members on Godot's Class Database (ClassDB)
@@ -57,18 +62,18 @@ public:
      * @brief Compiles the stored String as Lua code.
      * 
      * Checks if the last call made to set_lua_code had a non-empty string as parameter.
-     * As a side-effect, resets ctx and uses it to compile the code.
+     * As a side-effect, resets lua and uses it to compile the code.
      * 
      * @return Error OK if successfully compiled;
      * @return Error ERR_COMPILATION_FAILED if compilation failed somewhere;
-     * @return Error ERR_INVALID_DATA if lua_code is empty
      * 
-     * @post If OK was returned, ctx now contains the correctly compiled Lua code
+     * @post 
+     * If OK was returned, lua now contains the correctly compiled Lua code
      * and run() will execute the code if called.
-     * 
      * @post
-     * If ERR_COMPILATION_FAILED or ERR_INVALID_DATA were returned, compilation_succeded will
-     * be set to false
+     * If ERR_COMPILATION_FAILED wes returned, compilation_succeded will be set to false
+     * and error_message now contains the description of the error, prefixed with the 
+     * string "[LOGIC ERROR] : "
      *           
      */
     Error compile ();
@@ -84,9 +89,28 @@ public:
      * @return OK if the script ran successfully;
      * @return ERR_SCRIPT_FAILED if there was a runtime error in the execution;
      * @return \todo [TODO] ERR_TIMEOUT if the execution took to long to conclude
-     * @return \todo [TODO] ERR_INVALID_DATA `compilation_succeded` is false
+     * @return ERR_INVALID_DATA `compilation_succeded` is false
+     * 
+     * @post 
+     * If ERR_INVALID_DATA was returned, error_message now contains the description 
+     * of the error, prefixed with the string "[RUNTIME ERROR] : "
+     * @post 
+     * If ERR_SCRIPT_FAILED was returned, error_message now contains the description 
+     * of the error, prefixed with the string "[RUNTIME ERROR] : "
      */
     Error run ();
+
+    /**
+     * @brief Clears error_message.
+     * Any stored error_message will not be recoverable after this.
+     */
+    void clear_error_message ();
+    /**
+     * @brief Get the error_message member
+     * 
+     * @return String 
+     */
+    String get_error_message ();
 
     /**
      * @brief Construct a new LuaController object

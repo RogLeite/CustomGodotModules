@@ -2,7 +2,7 @@
  * @file lua_controller.h
  * @author Rodrigo Leite (you@domain.com)
  * @brief 
- * @version 0.2
+ * @version 0.3
  * @date 2021-11-19
  * 
  * @copyright Copyright (c) 2021
@@ -59,6 +59,11 @@ class LuaController : public Node {
      * be named in the context (i.e. what variable the player will call)
      */
     Dictionary signals_to_register;
+
+    /**
+     * @brief The bits corresponding to the core Lua libraries to open for the script execution 
+     */
+    int lua_core_libraries;
 protected:
     /**
      * @brief Binds a selection of methods and members on Godot's Class Database (ClassDB)
@@ -146,6 +151,12 @@ public:
      */
     void set_signals_to_register (const Dictionary& dictionary);
     Dictionary get_signals_to_register () const;
+
+    /**
+     * @brief Getter and Setter methods for lua_core_libraries
+     */
+    void set_lua_core_libs (int flags);
+    int get_lua_core_libs () const;
 
     /**
      * @brief Construct a new LuaController object

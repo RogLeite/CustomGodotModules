@@ -9,10 +9,15 @@ void LuaController::_bind_methods () {
     ClassDB::bind_method(D_METHOD("get_error_message"), &LuaController::get_error_message);
     ClassDB::bind_method(D_METHOD("set_signals_to_register"), &LuaController::set_signals_to_register);
     ClassDB::bind_method(D_METHOD("get_signals_to_register"), &LuaController::get_signals_to_register);
+    ClassDB::bind_method(D_METHOD("set_lua_core_libs", "flags"), &LuaController::set_lua_core_libs);
+    ClassDB::bind_method(D_METHOD("get_lua_core_libs"), &LuaController::get_lua_core_libs);
     
     ADD_PROPERTY(PropertyInfo(Variant::DICTIONARY, "signals_to_register", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_STORAGE),
                 "set_signals_to_register", "get_signals_to_register");
-    
+            
+    // Inspired by how Control's size flags are displayed
+    ADD_GROUP("Core Libs", "lua_core_");
+    ADD_PROPERTY(PropertyInfo(Variant::INT, "lua_core_libraries", PROPERTY_HINT_FLAGS, "base,coroutine,table,io,os,string,utf8,math,debug,package"), "set_lua_core_libs", "get_lua_core_libs");
 }
 
 void LuaController::set_lua_code (String code) {
@@ -107,6 +112,18 @@ Dictionary LuaController::get_signals_to_register () const {
     return signals_to_register.duplicate();
 }
 
+void LuaController::set_lua_core_libs (int flags) {
+    if (lua_core_libraries == flags)
+        return;
+    lua_core_libraries = flags;
+    // Sets the flags in the context
+    lua.setLuaCoreLibraries(lua_core_libraries);
+}
+
+int LuaController::get_lua_core_libs () const {
+    return lua_core_libraries;
+}
+
 LuaController::LuaController () {
     // This follows Godot's code convention, which didn't use initializer list
     lua_code = "";
@@ -115,6 +132,7 @@ LuaController::LuaController () {
     error_message = "";
     prepare_callables();
     signals_to_register = Dictionary();
+    lua_core_libraries = LuaCpp::LIB_ALL;
     
     connect("script_changed", this, "prepare_callables");
 }

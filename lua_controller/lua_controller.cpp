@@ -12,6 +12,8 @@ void LuaController::_bind_methods () {
     ClassDB::bind_method(D_METHOD("set_lua_core_libs", "flags"), &LuaController::set_lua_core_libs);
     ClassDB::bind_method(D_METHOD("get_lua_core_libs"), &LuaController::get_lua_core_libs);
     
+    ClassDB::add_virtual_method(get_class_static(), MethodInfo("lua_error_handler", PropertyInfo(Variant::INT, "error"), PropertyInfo(Variant::STRING, "message")));
+	
     ADD_PROPERTY(PropertyInfo(Variant::DICTIONARY, "signals_to_register", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_STORAGE),
                 "set_signals_to_register", "get_signals_to_register");
             
@@ -19,6 +21,7 @@ void LuaController::_bind_methods () {
     ADD_GROUP("Core Libs", "lua_core_");
     ADD_PROPERTY(PropertyInfo(Variant::INT, "lua_core_libraries", PROPERTY_HINT_FLAGS, "base,coroutine,table,io,os,string,utf8,math,debug,package"), "set_lua_core_libs", "get_lua_core_libs");
 }
+
 
 void LuaController::set_lua_code (String code) {
     lua_code = code;
@@ -57,7 +60,16 @@ void LuaController::prepare_callables() {
         // Only registers signals whose names are keys in the dictionary signals_to_register
         String signal_name(E->get().name);
         if (signals_to_register.has(signal_name))
-            callables.push_back(std::make_shared<LuaCallable>(get_instance_id(), E->get()));
+            callables.push_back(
+                std::make_shared<LuaCallable>(
+                    get_instance_id(),
+                    E->get(),
+                    [=](Error err, String msg){
+                        if (this->has_method("lua_error_handler"))
+                            this->call("lua_error_handler", (int)err, msg);
+                    }
+                )
+            );
  	}
 }
 

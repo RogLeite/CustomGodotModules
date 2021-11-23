@@ -2,7 +2,7 @@
  * @file lua_callable.h
  * @author Rodrigo Leite (you@domain.com)
  * @brief Calling this MetaObject inside the Lua context emits the informed signal in Godot
- * @version 0.1
+ * @version 0.2
  * @date 2021-11-22
  *
  */
@@ -12,11 +12,15 @@
 #include <LuaCpp.hpp>
 #include "core/ustring.h"
 #include "core/object.h"
+#include "core/error_list.h"
+
+#include <functional>
 
 class LuaCallable : public LuaCpp::LuaMetaObject {
 private:
     ObjectID object_id;
     MethodInfo signal_info;
+    std::function<void(Error, String)> handler;
 public:
     /**
      * @brief Emits the informed signal of the Object represented by object_id
@@ -35,7 +39,7 @@ public:
      * @param id Godot's representation of the instance of an object 
      * @param signal Godot's description of the signal
      */
-    LuaCallable (ObjectID id, MethodInfo signal);
+    LuaCallable (ObjectID id, MethodInfo signal, std::function<void(Error, String)> f);
     LuaCallable () = delete ;
     ~LuaCallable ();
 };

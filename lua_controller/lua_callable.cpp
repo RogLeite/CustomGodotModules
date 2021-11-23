@@ -11,8 +11,10 @@ int LuaCallable::Execute (LuaCpp::Engine::LuaState &L) {
     Object *obj = ObjectDB::get_instance(object_id);
 
     // Checks if the object instance still exists
-    if (!obj)
-        return 0;
+    // This should never be true, because obj should be the owner of this here object
+    // so I let the code execution continue 
+    // if (!obj)
+    //     return 0;
 
     // Checks how many arguments the signal expects, and how many are in the stack 
     int expected_args_amount = signal_info.arguments.size();
@@ -59,9 +61,7 @@ int LuaCallable::Execute (LuaCpp::Engine::LuaState &L) {
     // The cast to (const Variant**) is needed by the overload resolution to find the correct method.
     Error err = obj->emit_signal(signal_info.name, (const Variant**)p_args.data(), p_args.size());
     if (err != OK) {
-        // \todo [TODO] Send the error to the USER, not the PLAYER
-        lua_pushstring(L, "Error ocurred on signal emition");
-        return 1;
+        handler(err,"Error ocurred on signal emission");
     }
     return 0;
 }
@@ -70,9 +70,10 @@ String LuaCallable::get_signal_name () const {
     return signal_info.name;
 }
 
-LuaCallable::LuaCallable(ObjectID id, MethodInfo signal)
+LuaCallable::LuaCallable(ObjectID id, MethodInfo signal, std::function<void(Error, String)> f)
 : object_id(id)
 , signal_info(signal)
+, handler(f)
 {
 }
 

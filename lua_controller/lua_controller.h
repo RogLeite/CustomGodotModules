@@ -2,7 +2,7 @@
  * @file lua_controller.h
  * @author Rodrigo Leite (you@domain.com)
  * @brief 
- * @version 0.3
+ * @version 0.4
  * @date 2021-11-19
  * 
  * @copyright Copyright (c) 2021
@@ -64,7 +64,9 @@ class LuaController : public Node {
      * @brief The bits corresponding to the core Lua libraries to open for the script execution 
      */
     int lua_core_libraries;
+
 protected:
+    
     /**
      * @brief Binds a selection of methods and members on Godot's Class Database (ClassDB)
      */

@@ -76,7 +76,7 @@ namespace LuaCpp {
 		std::map<std::string, std::shared_ptr<Registry::LuaLibrary>> libraries;
 
 		/**
-		 * Flags correspondig to the core lua libraries to open on the State
+		 * Each bit is a flag that indicates if a specific core Lua library should be opened in LuaState
 		 */
 		int lua_core_libraries;
 

@@ -1,8 +1,8 @@
 /**
  * @file lua_callable.h
  * @author Rodrigo Leite (you@domain.com)
- * @brief Calling this MetaObject inside the Lua context emits the informed signal in Godot
- * @version 0.2
+ * @brief Calling this MetaObject inside a Lua context forward the call to the informed method in Godot
+ * @version 0.3
  * @date 2021-11-22
  *
  */
@@ -12,34 +12,32 @@
 #include <LuaCpp.hpp>
 #include "core/ustring.h"
 #include "core/object.h"
-#include "core/error_list.h"
 
 #include <functional>
 
 class LuaCallable : public LuaCpp::LuaMetaObject {
 private:
     ObjectID object_id;
-    MethodInfo signal_info;
-    std::function<void(Error, String)> handler;
+    MethodInfo info;
+    using ErrorHandler = std::function<void(Variant::CallError::Error, String)>;
+    ErrorHandler handler;
 public:
     /**
-     * @brief Emits the informed signal of the Object represented by object_id
-     * 
-     * Emits from the Object represented by object_id the signal described by signal_info
+     * @brief Calls the method `info` of the Object represented by `object_id`
      */
     int Execute (LuaCpp::Engine::LuaState &L);
     /**
-     * @brief Returns the signal name, as stored in signal_info
+     * @brief Returns the method name, as stored in info
      */
-    String get_signal_name () const;
+    String get_method_name () const;
 
     /**
      * @brief Construct a new Meta Callable object
      * 
      * @param id Godot's representation of the instance of an object 
-     * @param signal Godot's description of the signal
+     * @param method Godot's description of the method
      */
-    LuaCallable (ObjectID id, MethodInfo signal, std::function<void(Error, String)> f);
+    LuaCallable (ObjectID id, MethodInfo method, ErrorHandler f);
     LuaCallable () = delete ;
     ~LuaCallable ();
 };

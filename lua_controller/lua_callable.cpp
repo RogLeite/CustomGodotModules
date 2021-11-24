@@ -16,8 +16,8 @@ int LuaCallable::Execute (LuaCpp::Engine::LuaState &L) {
     // if (!obj)
     //     return 0;
 
-    // Checks how many arguments the signal expects, and how many are in the stack 
-    int expected_args_amount = signal_info.arguments.size();
+    // Checks how many arguments the method expects, and how many are in the stack 
+    int expected_args_amount = info.arguments.size();
     int top = lua_gettop(L);
     
     // Ignores the value at the base of the stack, it always is a userdatum
@@ -33,9 +33,6 @@ int LuaCallable::Execute (LuaCpp::Engine::LuaState &L) {
     for (int i=2; i<=expected_args_amount+1; i++) {
         int t = lua_type(L, i);
         switch (t) {
-        case LUA_TNIL:
-            args.push_back(Variant()); //Nil value
-            break;
         case LUA_TSTRING:
             args.push_back(lua_tostring(L,i));
             break;
@@ -45,9 +42,10 @@ int LuaCallable::Execute (LuaCpp::Engine::LuaState &L) {
         case LUA_TBOOLEAN:
             args.push_back((bool)lua_toboolean(L,i));
             break;
-        case LUA_TTABLE: // For now, ignores tables. But they could probably be translated to a Dictionary. Maybe converting to and from a string
+        case LUA_TNIL:
+        case LUA_TTABLE: // Ignores table. But they could probably be translated to a Dictionary.
         default:
-            args.push_back(lua_typename(L, t));
+            args.push_back(Variant()); //< Nil value
             break;
         }
     }
@@ -57,22 +55,45 @@ int LuaCallable::Execute (LuaCpp::Engine::LuaState &L) {
     for (Variant &arg : args)
         p_args.push_back(&arg);
 
-
-    // The cast to (const Variant**) is needed by the overload resolution to find the correct method.
-    Error err = obj->emit_signal(signal_info.name, (const Variant**)p_args.data(), p_args.size());
-    if (err != OK) {
-        handler(err,"Error ocurred on signal emission");
+    Variant::CallError r_error;
+    // The cast (const Variant**) is needed by the overload resolution to find the correct method.
+    Variant result = obj->call(info.name, (const Variant**)p_args.data(), p_args.size(), r_error);
+    if (r_error.error != Variant::CallError::CALL_OK) {
+        String msg = Variant::get_call_error_text(obj, info.name, (const Variant**)p_args.data(), p_args.size(), r_error);
+        handler(r_error.error, msg);
     }
-    return 0;
+
+    switch (result.get_type())
+    {
+    case Variant::STRING :
+        lua_pushstring(L,((String)result).ascii().get_data());
+        break;
+    case Variant::INT :
+    case Variant::REAL :
+        lua_pushnumber(L, (lua_Number)result);
+        break;
+    case Variant::BOOL :
+        lua_pushboolean(L, result ? 1 : 0);
+        break;
+    case Variant::DICTIONARY : // Could be converted to table, not implemented
+	case Variant::ARRAY :      // Could be converted to table, not implemented
+    case Variant::NIL :        // Same as default behaviour
+    default:
+        lua_pushnil(L);
+        break;
+    }
+
+    // Allways returns a value, even if it is Nil
+    return 1;
 }
 
-String LuaCallable::get_signal_name () const {
-    return signal_info.name;
+String LuaCallable::get_method_name () const {
+    return info.name;
 }
 
-LuaCallable::LuaCallable(ObjectID id, MethodInfo signal, std::function<void(Error, String)> f)
+LuaCallable::LuaCallable(ObjectID id, MethodInfo method, ErrorHandler f)
 : object_id(id)
-, signal_info(signal)
+, info(method)
 , handler(f)
 {
 }

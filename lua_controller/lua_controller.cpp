@@ -2,20 +2,23 @@
 
 void LuaController::_bind_methods () {
     ClassDB::bind_method(D_METHOD("set_lua_code", "code"), &LuaController::set_lua_code, DEFVAL(""));
-    ClassDB::bind_method(D_METHOD("prepare_callables"), &LuaController::prepare_callables);
     ClassDB::bind_method(D_METHOD("compile"), &LuaController::compile);
+    ClassDB::bind_method(D_METHOD("prepare_callables"), &LuaController::prepare_callables);
     ClassDB::bind_method(D_METHOD("run"), &LuaController::run);
     ClassDB::bind_method(D_METHOD("clear_error_message"), &LuaController::clear_error_message);
     ClassDB::bind_method(D_METHOD("get_error_message"), &LuaController::get_error_message);
-    ClassDB::bind_method(D_METHOD("set_signals_to_register"), &LuaController::set_signals_to_register);
-    ClassDB::bind_method(D_METHOD("get_signals_to_register"), &LuaController::get_signals_to_register);
+    ClassDB::bind_method(D_METHOD("set_methods_to_register"), &LuaController::set_methods_to_register);
+    ClassDB::bind_method(D_METHOD("get_methods_to_register"), &LuaController::get_methods_to_register);
     ClassDB::bind_method(D_METHOD("set_lua_core_libs", "flags"), &LuaController::set_lua_core_libs);
     ClassDB::bind_method(D_METHOD("get_lua_core_libs"), &LuaController::get_lua_core_libs);
     
-    ClassDB::add_virtual_method(get_class_static(), MethodInfo("lua_error_handler", PropertyInfo(Variant::INT, "error"), PropertyInfo(Variant::STRING, "message")));
+    ClassDB::add_virtual_method(get_class_static(),
+        MethodInfo("lua_error_handler",
+            PropertyInfo(Variant::INT,"call_error_code",PROPERTY_HINT_ENUM,"CALL_OK,CALL_ERROR_INVALID_METHOD,CALL_ERROR_INVALID_ARGUMENT,CALL_ERROR_TOO_MANY_ARGUMENTS,CALL_ERROR_TOO_FEW_ARGUMENTS,CALL_ERROR_INSTANCE_IS_NULL"),
+            PropertyInfo(Variant::STRING, "message")));
 	
-    ADD_PROPERTY(PropertyInfo(Variant::DICTIONARY, "signals_to_register", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_STORAGE),
-                "set_signals_to_register", "get_signals_to_register");
+    ADD_PROPERTY(PropertyInfo(Variant::DICTIONARY, "methods_to_register", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_STORAGE),
+                "set_methods_to_register", "get_methods_to_register");
             
     // Inspired by how Control's size flags are displayed
     ADD_GROUP("Core Libs", "lua_core_");
@@ -46,25 +49,25 @@ Error LuaController::compile () {
 
 
 void LuaController::prepare_callables() {
-    List<MethodInfo> signal_list; 
-	get_signal_list(&signal_list);
+    List<MethodInfo> method_list; 
+	get_method_list(&method_list);
 
     callables.clear();
 
-    // If there are no signals to register, then the work is done
-    if (signals_to_register.empty())
+    // If there are no methods to register, then the work is done
+    if (methods_to_register.empty())
         return;
     
-    // For every signal in this object
-    for (List<MethodInfo>::Element *E = signal_list.front(); E; E = E->next()) {
-        // Only registers signals whose names are keys in the dictionary signals_to_register
-        String signal_name(E->get().name);
-        if (signals_to_register.has(signal_name))
+    // For every method in this object
+    for (List<MethodInfo>::Element *E = method_list.front(); E; E = E->next()) {
+        // Only registers methods whose names are keys in the dictionary methods_to_register
+        String method_name(E->get().name);
+        if (methods_to_register.has(method_name))
             callables.push_back(
                 std::make_shared<LuaCallable>(
                     get_instance_id(),
                     E->get(),
-                    [=](Error err, String msg){
+                    [=](Variant::CallError::Error err, String msg){
                         if (this->has_method("lua_error_handler"))
                             this->call("lua_error_handler", (int)err, msg);
                     }
@@ -79,11 +82,10 @@ Error LuaController::run () {
         return ERR_INVALID_DATA;
     }
     
-    // Adds every LuaCallable from callables in the context as 
-    // a variable named after name_in_lua
+    // Adds every LuaCallable from callables in the context as a variable named after name_in_lua
     for (auto &callable : callables) {
-        const Variant &key = callable->get_signal_name();
-        const char *name_in_lua = ((String)signals_to_register.get_valid(key)).ascii().get_data();
+        const Variant &key = callable->get_method_name();
+        const char *name_in_lua = ((String)methods_to_register.get_valid(key)).ascii().get_data();
         lua.AddGlobalVariable(name_in_lua , callable);
     }
 
@@ -106,22 +108,22 @@ String LuaController::get_error_message () {
     return error_message;
 }
 
-void LuaController::set_signals_to_register (const Dictionary& signals) {
-    Array keys = signals.keys();
+void LuaController::set_methods_to_register (const Dictionary& methods) {
+    Array keys = methods.keys();
     // Checks if every key and value is of type STRING
     for (int i=0; i<keys.size(); i++) {
         const Variant &key = keys[i];
         ERR_FAIL_COND( key.get_type() != Variant::STRING);
-        ERR_FAIL_COND( signals[key].get_type() != Variant::STRING);
+        ERR_FAIL_COND( methods[key].get_type() != Variant::STRING);
     }
-    signals_to_register = signals.duplicate();
+    methods_to_register = methods.duplicate();
 
-    // Since signals_to_register changed, chances are that the callables need preparing
+    // After methods_to_register changed, it's probable that callables need preparing
     prepare_callables();
 }
 
-Dictionary LuaController::get_signals_to_register () const {
-    return signals_to_register.duplicate();
+Dictionary LuaController::get_methods_to_register () const {
+    return methods_to_register.duplicate();
 }
 
 void LuaController::set_lua_core_libs (int flags) {
@@ -143,7 +145,7 @@ LuaController::LuaController () {
     compilation_succeded = false;
     error_message = "";
     prepare_callables();
-    signals_to_register = Dictionary();
+    methods_to_register = Dictionary();
     lua_core_libraries = LuaCpp::LIB_ALL;
     
     connect("script_changed", this, "prepare_callables");

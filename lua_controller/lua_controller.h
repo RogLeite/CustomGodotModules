@@ -2,7 +2,7 @@
  * @file lua_controller.h
  * @author Rodrigo Leite (you@domain.com)
  * @brief 
- * @version 0.4
+ * @version 0.5
  * @date 2021-11-19
  * 
  * @copyright Copyright (c) 2021
@@ -35,33 +35,33 @@ class LuaController : public Node {
     LuaCpp::LuaControllerContext lua;
 
     /**
-     * @brief Flag used by run() to decide if it tries to execute code
+     * @brief run() checks if this flag is true before trying to execute code
      */
     bool compilation_succeded;
 
     /**
-     * @brief Stores the error message describing the last Error code returned by a method.
+     * @brief After LuaController's methods return a Error, they store a description of the error in error_message.
      */
     String error_message;
 
     /**
-     * @brief Vector of objects callable from Lua
+     * @brief Vector of objects invokable inside Lua
      * 
-     * When called during the execution of Lua code, they emit a Godot signal.
+     * run() adds each of these LuaCallables in the LuaState before execution.
+     * When invoked by the Lua script execution, a LuaCallable calls it's respective method from a Godot Object.
      */
     std::vector<std::shared_ptr<LuaCallable>> callables; 
 
     /**
-     * @brief Dictionary of pairs {"signal to register" : "name to register as"}
+     * @brief Dictionary of pairs {"method to register" : "name to register as"}
      * 
-     * The keys of this dictionary are which of this object's signals will be registered
-     * as LuaCallables inside a Context, and they're respective values are how they will 
-     * be named in the context (i.e. what variable the player will call)
+     * Each `key` from methods_to_register is the name of a method from this Object.
+     * run() uses each value from methods_to_register to name the variable that represents the method `key` in the LuaControllerContext
      */
-    Dictionary signals_to_register;
+    Dictionary methods_to_register;
 
     /**
-     * @brief The bits corresponding to the core Lua libraries to open for the script execution 
+     * @brief Each bit is a flag that indicates if a specific core Lua library should be opened in the LuaControllerContext 
      */
     int lua_core_libraries;
 
@@ -77,40 +77,35 @@ public:
     /**
      * @brief Set the lua_code member
      * 
-     * @param code String to be stored
-     * 
-     * @details Sets lua_code as code. If code is an empty String, future calls to 
-     * LuaController's other methods treat lua_code as undefined which, in general,
-     * means they will do nothing and return an Error.
+     * The String is not verified to see if it is valid and compilable lua code.
      */
     void set_lua_code (String code);
 
     /**
      * @brief Compiles the stored String as Lua code.
      * 
-     * Checks if the last call made to set_lua_code had a non-empty string as parameter.
-     * As a side-effect, resets lua and uses it to compile the code.
+     * As a side-effect, compiles the code into the lua member. Any previous compiled code is lost.
      * 
      * @return Error OK if successfully compiled;
      * @return Error ERR_COMPILATION_FAILED if compilation failed somewhere;
      * 
      * @post 
-     * If OK was returned, lua now contains the correctly compiled Lua code
+     * If OK was returned, member lua now contains the correctly compiled Lua code
      * and run() will execute the code if called.
      * @post
-     * If ERR_COMPILATION_FAILED wes returned, compilation_succeded will be set to false
-     * and error_message now contains the description of the error, prefixed with the 
+     * If ERR_COMPILATION_FAILED was returned, compilation_succeded is set to false
+     * and error_message contains the description of the error, prefixed with the 
      * string "[LOGIC ERROR] : "
      *           
      */
     Error compile ();
 
     /**
-     * @brief Prepares a LuaCallable for each signal from signals_to_register
+     * @brief Prepares a LuaCallable for each method from methods_to_register
      * 
-     * This needs to be called if the object's signals have changed.
-     * This method is connected to this objects "script_changed" signal.
-     * For each signal in signals_to_register, instances a LuaCallable and stores it in callables. 
+     * For each method in methods_to_register, instances a LuaCallable and stores it in member callables. 
+     * prepare_callables is connected to this object's "script_changed" signal.
+     * prepare_callables needs to be called by the user if the object's methods have been changed.
      */
     void prepare_callables ();
 
@@ -118,41 +113,38 @@ public:
      * 
      * @brief Executes the compiled Lua code
      * 
-     * @return Error 
-     * 
-     * @details description
+     * Every element from member callables is placed in the LuaControllerContext.
      * 
      * @return OK if the script ran successfully;
-     * @return ERR_SCRIPT_FAILED if there was a runtime error in the execution;
+     * @return ERR_SCRIPT_FAILED if a runtime_error occured during the execution;
      * @return \todo [TODO] ERR_TIMEOUT if the execution took to long to conclude
-     * @return ERR_INVALID_DATA `compilation_succeded` is false
+     * @return ERR_INVALID_DATA if `compilation_succeded` is false
      * 
      * @post 
-     * If ERR_INVALID_DATA was returned, error_message now contains the description 
+     * If ERR_INVALID_DATA was returned, error_message contains the description 
      * of the error, prefixed with the string "[RUNTIME ERROR] : "
      * @post 
-     * If ERR_SCRIPT_FAILED was returned, error_message now contains the description 
+     * If ERR_SCRIPT_FAILED was returned, error_message contains the description 
      * of the error, prefixed with the string "[RUNTIME ERROR] : "
      */
     Error run ();
 
     /**
      * @brief Clears error_message.
+     * 
      * Any stored error_message will not be recoverable after this.
      */
     void clear_error_message ();
     /**
      * @brief Get the error_message member
-     * 
-     * @return String 
      */
     String get_error_message ();
 
     /**
-     * @brief Getter and Setter methods for signals_to_register
+     * @brief Getter and Setter methods for methods_to_register
      */
-    void set_signals_to_register (const Dictionary& dictionary);
-    Dictionary get_signals_to_register () const;
+    void set_methods_to_register (const Dictionary& dictionary);
+    Dictionary get_methods_to_register () const;
 
     /**
      * @brief Getter and Setter methods for lua_core_libraries

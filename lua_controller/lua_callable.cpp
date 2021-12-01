@@ -10,7 +10,6 @@
 int LuaCallable::Execute (LuaCpp::Engine::LuaState &L) {
     Object *obj = ObjectDB::get_instance(object_id);
 
-    // Checks if the object instance still exists
     // This should never be true, because obj should be the owner of this here object
     // so I let the code execution continue 
     // if (!obj)

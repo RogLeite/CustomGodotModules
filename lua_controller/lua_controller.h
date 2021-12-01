@@ -1,8 +1,12 @@
 /**
  * @file lua_controller.h
  * @author Rodrigo Leite (you@domain.com)
- * @brief 
- * @version 0.5
+ * @brief LuaController can interpret a String as Lua code.
+ * 
+ * LuaController can interpret a String as Lua code. And, through the property method_to_register,
+ * allows the user of the Node to choose which of LuaController's method can be invoked as a function
+ * by the execution of the Lua code. The methods   
+ * @version 0.6
  * @date 2021-11-19
  * 
  * @copyright Copyright (c) 2021
@@ -24,6 +28,8 @@
 class LuaController : public Node {
 	GDCLASS(LuaController, Node);
     
+    friend class LuaControllerUnitTester;
+
     /**
      * @brief String to be interpreted as Lua code
      */

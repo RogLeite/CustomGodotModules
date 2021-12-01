@@ -30,7 +30,8 @@ sources = [
     "register_types.cpp",
     "lua_controller.cpp",
     "LuaControllerContext.cpp",
-    "lua_callable.cpp"
+    "lua_callable.cpp",
+    "lua_controller_unit_tester.cpp"
 ]
 
 # First, create a custom env for the shared library.

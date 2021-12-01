@@ -39,6 +39,9 @@
 #include <memory>
 #include <LuaCpp.hpp>
 
+// Forward declaration necessary for friend declaration
+class LuaControllerUnitTester;
+
 namespace LuaCpp {
 
 
@@ -58,6 +61,8 @@ namespace LuaCpp {
     };
 
 	class LuaControllerContext {
+	private:
+    	friend class ::LuaControllerUnitTester;
 		/**
 		 * @brief Name of the context
 		 */

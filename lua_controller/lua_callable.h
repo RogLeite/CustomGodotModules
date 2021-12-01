@@ -17,6 +17,7 @@
 
 class LuaCallable : public LuaCpp::LuaMetaObject {
 private:
+    friend class LuaControllerUnitTester;
     ObjectID object_id;
     MethodInfo info;
     using ErrorHandler = std::function<void(Variant::CallError::Error, String)>;

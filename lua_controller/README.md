@@ -63,7 +63,7 @@ MYCFLAGS = -fPIC
 ### Run the automated tests for LuaController
  - Go to the directory of the tester project
  ```
- cd lua_controller/test
+ cd lua_controller/tester-project
  ```
  - Give execution permission to `runtest.sh`
  ```
@@ -77,7 +77,7 @@ MYCFLAGS = -fPIC
  ```
  ./runtest.sh -a test/ 
  ```
- 
+
  ## Build the documentation
  To build the documentation into the `docs` directory, run doxygen:
  ```

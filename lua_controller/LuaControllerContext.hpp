@@ -128,6 +128,9 @@ namespace LuaCpp {
 		 * The provided environment will be loaded instead of the 
 		 * global environment.
 		 *
+		 * @param env Variables from this environment will be loaded as global 
+		 * variables on the state
+		 * 
 		 * @return Pointer to the LuaState object holding the pointer of the lua_State
 		 */
 		std::unique_ptr<Engine::LuaState> newState(const LuaEnvironment &env);
@@ -171,6 +174,8 @@ namespace LuaCpp {
 		 * If the name is not found, the method will throw exception
 		 *
 		 * @param name Name of the snippet to be loaded
+		 * @param env Variables from this environment will be loaded as global 
+		 * variables on the state
 		 *
 		 * @return Pointer to the LuaState object holding the pointer of the lua_State
 		 */
@@ -215,7 +220,7 @@ namespace LuaCpp {
 		 * will throw an `std::logic_error` with the error code received from Lua engin
 		 *
 		 * @param name Name under which the snippet is registered in the registry
-		 * @param code path to the file where the code is stored
+		 * @param fname path to the file where the code is stored
 		 */
 		void CompileFile(const std::string &name, const std::string &fname);
 
@@ -229,13 +234,13 @@ namespace LuaCpp {
 		 * will throw an `std::logic_error` with the error code received from Lua engin
 		 *
 		 * @param name Name under which the snippet is registered in the registry
-		 * @param code path to the file where the code is stored
+		 * @param fname path to the file where the code is stored
 		 * @param recompile if set to true, the new code will replace the old in the registry
 		 */
 		void CompileFile(const std::string &name, const std::string &fname, bool recompile);
 
 		/**
-		 * @bried Compiles a code snippet and runs
+		 * @brief Compiles a code snippet and runs
 		 *
 		 * @details
 		 * The code sneippet will be compiled under the name `default` and
@@ -252,7 +257,7 @@ namespace LuaCpp {
 		void CompileStringAndRun(const std::string &code);
 
 		/**
-		 * @bried Compiles the file and runs
+		 * @brief Compiles the file and runs
 		 *
 		 * @details
 		 * The file will be compiled under the name `default` and
@@ -269,7 +274,7 @@ namespace LuaCpp {
 		void CompileFileAndRun(const std::string &code);
 		
 		/**
-		 * @bried Run a code snippet
+		 * @brief Run a code snippet
 		 *
 		 * @details
 		 * Run a snippet that was previously compiled and stored in the registry
@@ -279,13 +284,15 @@ namespace LuaCpp {
 		void Run(const std::string &name);
 
 		/**
-		 * @bried Run a code snippet with a given `lua` global table
+		 * @brief Run a code snippet with a given `lua` global table
 		 *
 		 * @details
 		 * Run a snippet that was previously compiled and stored in the registry
 		 * with a given environment (lua global variables)
 		 *
 		 * @param name Name under which the snippet is registered
+		 * @param env Variables from this environment will be loaded as global 
+		 * variables on the state
 		 */
 		void RunWithEnvironment(const std::string &name, const LuaEnvironment &env);
 

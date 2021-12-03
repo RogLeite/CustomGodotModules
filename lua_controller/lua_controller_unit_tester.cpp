@@ -42,8 +42,7 @@
  * @brief END_SUITE returns the error array, if there are any. If not, returns true
  */
 #define END_SUITE \
-    if (errors.size() > 0) { return errors; }\
-    else { return true; }; 
+    return errors; 
 
 /**
  * @brief Helper to test LuaCpp::openLibs()
@@ -89,7 +88,7 @@ Variant LuaControllerUnitTester::_and (Variant arg1, Variant arg2) {
     return arg_or_default(arg1, false) && arg_or_default(arg2, false);
 }
 
-Variant LuaControllerUnitTester::_lua_callable () {
+Array LuaControllerUnitTester::_lua_callable () {
     
     // For ease of access
     List<MethodInfo> method_list; 
@@ -309,7 +308,7 @@ Variant LuaControllerUnitTester::_lua_callable () {
 
 }
 
-Variant LuaControllerUnitTester::_lua_controller_context () {
+Array LuaControllerUnitTester::_lua_controller_context () {
 
     using namespace LuaCpp;
 
@@ -368,7 +367,7 @@ Variant LuaControllerUnitTester::_lua_controller_context () {
 
 }
 
-Variant LuaControllerUnitTester::_lua_controller () {
+Array LuaControllerUnitTester::_lua_controller () {
 
     START_SUITE("lua_controller");
     
@@ -428,7 +427,7 @@ Variant LuaControllerUnitTester::_lua_controller () {
         dic["name2"] = "lua_name2";
         control.set_methods_to_register(dic);
         Dictionary got = control.get_methods_to_register();
-        UNIT_ASSERT( got.size() != 0, "get_methods_to_register returned empty Dictionary" );
+        UNIT_ASSERT( got.size() == 0, "get_methods_to_register returned empty Dictionary" );
         UNIT_ASSERT( ((String)got.get_valid("name1")).casecmp_to("lua_name1") != 0, "Value 'lua_name1' wasn't received in key 'name1'");
     }
     

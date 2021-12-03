@@ -49,31 +49,28 @@ class LuaControllerUnitTester : public Node {
      * @brief Run unit tests for class LuaCallable.
      * 
      * @return 
-     * true if all tests succeeded. 
-     * @return 
-     * Array of String if any test failed. Each String in the Array decribes one failed Assertion.
+     * Array of String. Each String in the Array decribes one failed Assertion.
+     * If the array is empty, all tests passed.
      */
-    Variant _lua_callable ();
+    Array _lua_callable ();
 
     /**
      * @brief Run unit tests for class LuaControllerContext.
      * 
      * @return 
-     * true if all tests succeeded. 
-     * @return 
-     * Array of String if any test failed. Each String in the Array decribes one failed Assertion.
+     * Array of String. Each String in the Array decribes one failed Assertion.
+     * If the array is empty, all tests passed.
      */
-    Variant _lua_controller_context ();
+    Array _lua_controller_context ();
 
     /**
      * @brief Run unit tests for class LuaController.
      * 
      * @return 
-     * true if all tests succeeded. 
-     * @return 
-     * Array of String if any test failed. Each String in the Array decribes one failed Assertion.
+     * Array of String. Each String in the Array decribes one failed Assertion.
+     * If the array is empty, all tests passed.
      */
-    Variant _lua_controller ();
+    Array _lua_controller ();
 
 protected:    
     /**

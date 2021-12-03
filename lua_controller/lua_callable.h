@@ -37,6 +37,7 @@ public:
      * 
      * @param id Godot's representation of the instance of an object 
      * @param method Godot's description of the method
+     * @param f Callback to be invoked if an error occurs when Execute() calls the method
      */
     LuaCallable (ObjectID id, MethodInfo method, ErrorHandler f);
     LuaCallable () = delete ;

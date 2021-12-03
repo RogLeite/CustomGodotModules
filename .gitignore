@@ -2,4 +2,6 @@
 *.obj
 __pycache__/
 *.o
+*.os
 .vscode/
+docs/

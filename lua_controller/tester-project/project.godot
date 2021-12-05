@@ -584,6 +584,11 @@ _global_script_classes=[ {
 "language": "GDScript",
 "path": "res://addons/gdUnit3/src/network/rpc/RPCMessage.gd"
 }, {
+"base": "GdUnitTestSuite",
+"class": "RealSceneTest",
+"language": "GDScript",
+"path": "res://test/RealSceneTest.gd"
+}, {
 "base": "Reference",
 "class": "Result",
 "language": "GDScript",
@@ -599,20 +604,30 @@ _global_script_classes=[ {
 "language": "GDScript",
 "path": "res://addons/gdUnit3/src/ui/parts/RichTextLabelExt.gd"
 }, {
-"base": "Node",
-"class": "RootScene",
-"language": "GDScript",
-"path": "res://RootScene.gd"
-}, {
-"base": "GdUnitTestSuite",
-"class": "RootSceneTest",
-"language": "GDScript",
-"path": "res://test/RootSceneTest.gd"
-}, {
 "base": "Resource",
 "class": "SignalHandler",
 "language": "GDScript",
 "path": "res://addons/gdUnit3/src/core/event/SignalHandler.gd"
+}, {
+"base": "GdUnitTestSuite",
+"class": "StateBadCodeTest",
+"language": "GDScript",
+"path": "res://test/StateBadCodeTest.gd"
+}, {
+"base": "GdUnitTestSuite",
+"class": "StateCompiledCodeTest",
+"language": "GDScript",
+"path": "res://test/StateCompiledCodeTest.gd"
+}, {
+"base": "GdUnitTestSuite",
+"class": "StateTransitionTest",
+"language": "GDScript",
+"path": "res://test/StateTransitionsTest.gd"
+}, {
+"base": "GdUnitTestSuite",
+"class": "StateUncompiledCodeTest",
+"language": "GDScript",
+"path": "res://test/StateUncompiledCodeTest.gd"
 }, {
 "base": "Fuzzer",
 "class": "StringFuzzer",
@@ -623,6 +638,11 @@ _global_script_classes=[ {
 "class": "TimeUnit",
 "language": "GDScript",
 "path": "res://addons/gdUnit3/src/core/TimeUnit.gd"
+}, {
+"base": "GdUnitTestSuite",
+"class": "UnitTest",
+"language": "GDScript",
+"path": "res://test/UnitTest.gd"
 }, {
 "base": "Reference",
 "class": "ValueProvider",
@@ -765,14 +785,18 @@ _global_script_class_icons={
 "RPCGdUnitEvent": "",
 "RPCGdUnitTestSuite": "",
 "RPCMessage": "",
+"RealSceneTest": "",
 "Result": "",
 "RichTextEffectBackground": "",
 "RichTextLabelExt": "",
-"RootScene": "",
-"RootSceneTest": "",
 "SignalHandler": "",
+"StateBadCodeTest": "",
+"StateCompiledCodeTest": "",
+"StateTransitionTest": "",
+"StateUncompiledCodeTest": "",
 "StringFuzzer": "",
 "TimeUnit": "",
+"UnitTest": "",
 "ValueProvider": "",
 "Vector2Fuzzer": "",
 "Vector3Fuzzer": "",
@@ -783,6 +807,7 @@ _global_script_class_icons={
 [application]
 
 config/name="LuaControllerTester"
+run/main_scene="res://RealScene/ScriptRunner.tscn"
 config/icon="res://icon.png"
 
 [editor_plugins]

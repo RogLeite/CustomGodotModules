@@ -5,3 +5,5 @@ __pycache__/
 *.os
 .vscode/
 docs/
+lua_controller/tester-project/reports/
+lua_controller/tester-project/.import/

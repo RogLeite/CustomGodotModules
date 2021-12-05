@@ -1,0 +1,110 @@
+[gd_scene load_steps=6 format=2]
+
+[ext_resource path="res://RealScene/ScriptRunner.gd" type="Script" id=1]
+[ext_resource path="res://RealScene/SignalNoArgs.gd" type="Script" id=3]
+[ext_resource path="res://RealScene/AnimationPlayer.gd" type="Script" id=5]
+[ext_resource path="res://RealScene/LuaController.gd" type="Script" id=6]
+
+[sub_resource type="Animation" id=1]
+resource_name = "flow"
+tracks/0/type = "value"
+tracks/0/path = NodePath(".:color")
+tracks/0/interp = 2
+tracks/0/loop_wrap = true
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/keys = {
+"times": PoolRealArray( 0, 1 ),
+"transitions": PoolRealArray( 1, 1 ),
+"update": 0,
+"values": [ Color( 1, 0, 0, 1 ), Color( 0, 1, 0, 1 ) ]
+}
+
+[node name="ScriptRunner" type="HBoxContainer"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource( 1 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Script" type="TextEdit" parent="."]
+margin_right = 510.0
+margin_bottom = 600.0
+rect_min_size = Vector2( 200, 0 )
+size_flags_horizontal = 3
+size_flags_vertical = 3
+text = "print(\"print called from inside script\")"
+highlight_current_line = true
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="VBox" type="VBoxContainer" parent="."]
+margin_left = 514.0
+margin_right = 1024.0
+margin_bottom = 600.0
+size_flags_horizontal = 3
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="PrintLabel" type="Label" parent="VBox"]
+margin_right = 510.0
+margin_bottom = 418.0
+rect_min_size = Vector2( 200, 0 )
+size_flags_vertical = 3
+size_flags_stretch_ratio = 7.0
+text = "Player should not see this"
+autowrap = true
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="ColorRect" type="ColorRect" parent="VBox"]
+margin_top = 422.0
+margin_right = 510.0
+margin_bottom = 482.0
+size_flags_vertical = 3
+color = Color( 1, 0, 0, 1 )
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="VBox/ColorRect"]
+anims/flow = SubResource( 1 )
+script = ExtResource( 5 )
+
+[node name="SignalNoArgs" type="LineEdit" parent="VBox"]
+margin_top = 486.0
+margin_right = 510.0
+margin_bottom = 546.0
+size_flags_horizontal = 3
+size_flags_vertical = 3
+text = "my_signal was emitted!!!"
+align = 1
+editable = false
+secret = true
+expand_to_text_length = true
+script = ExtResource( 3 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Run" type="Button" parent="VBox"]
+margin_top = 550.0
+margin_right = 510.0
+margin_bottom = 600.0
+rect_min_size = Vector2( 0, 50 )
+hint_tooltip = "Control+Enter to RUN"
+size_flags_horizontal = 3
+text = "RUN"
+
+[node name="LuaController" type="LuaController" parent="."]
+methods_to_register = {
+}
+lua_core_libraries = 0
+script = ExtResource( 6 )
+
+[connection signal="animation_finished" from="VBox/ColorRect/AnimationPlayer" to="." method="_on_animation_finished"]
+[connection signal="pressed" from="VBox/Run" to="." method="_on_Run_pressed"]
+[connection signal="play_sig" from="LuaController" to="VBox/ColorRect/AnimationPlayer" method="_on_play_sig"]
+[connection signal="print_called" from="LuaController" to="." method="_on_print_called"]
+[connection signal="secret" from="LuaController" to="VBox/SignalNoArgs" method="_on_secret"]

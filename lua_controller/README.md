@@ -75,8 +75,9 @@ MYCFLAGS = -fPIC
  ```
  - Run all test suites from the command-line:
  ```
- ./runtest.sh -a test/ 
+ ./runtest.sh -c -a test/ 
  ```
+ - A html-formatted report will be produced in the directory `reports`
 
  ## Build the documentation
  To build the documentation into the `docs` directory, run doxygen:

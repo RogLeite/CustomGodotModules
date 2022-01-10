@@ -361,8 +361,67 @@ Array LuaControllerUnitTester::_lua_controller_context () {
         UNIT_ASSERT(lua_isnil(L3, -1), "openLibs, when called with LIB_ALL flag, didn't open base library");
         lua_pop(L3, 1);
     }
+    {
+        NEW_TEST("Test set Timeout Limits");
+        LuaControllerContext ctx;
+        UNIT_ASSERT( ctx.max_lines != 1e5, "Incorrect max_lines initial value");
+        UNIT_ASSERT( ctx.max_count != 1e6, "Incorrect max_count initial value");
+        UNIT_ASSERT( ctx.count_interval != 10, "Incorrect count_interval initial value");
 
-
+        // No limits are imposed to the values
+        ctx.setMaxLines(-5);
+        ctx.setMaxCount(-5);
+        ctx.setCountInterval(-5);
+        UNIT_ASSERT( ctx.max_lines != -5, "setMaxLines didn't set value to -5");
+        UNIT_ASSERT( ctx.max_count != -5, "setMaxCount didn't set value to -5");
+        UNIT_ASSERT( ctx.count_interval != -5, "setCountInterval didn't set value to -5");
+    }
+    {
+        NEW_TEST("Test a script timeout");
+        LuaControllerContext ctx;
+        ctx.setLuaCoreLibraries(LIB_NONE);
+        ctx.setMaxLines(0);
+        ctx.setMaxCount(3);
+        ctx.setCountInterval(1);
+        ctx.CompileString("default", "a=1;a=a+1;a=a+1;a=a+1;", true);
+        bool error_occured = false;
+        try {
+            ctx.Run("default");
+        }
+        catch (std::runtime_error& e) {
+            error_occured = true;
+            String what = e.what();
+            // Chooses the error value given the received message
+            UNIT_ASSERT(!what.begins_with("[TIMEOUT] : Exceeded command count"), "Error message for count timeout is incorrect");
+        }
+        UNIT_ASSERT(!error_occured, "No Error was thrown for count timeout");
+        
+        ctx.setMaxLines(2);
+        ctx.setMaxCount(0);
+        ctx.CompileString("default", "a=1\na=a+1\na=a+1\na=a+1;", true);
+        error_occured = false;
+        try {
+            ctx.Run("default");
+        }
+        catch (std::runtime_error& e) {
+            error_occured = true;
+            String what = e.what();
+            // Chooses the error value given the received message
+            UNIT_ASSERT(!what.begins_with("[TIMEOUT] : Exceeded line count"), "Error message for line timeout is incorrect");
+        }
+        UNIT_ASSERT(!error_occured, "No Error was thrown for line tieout");
+    }
+    {
+        NEW_TEST("Test set/getTimeoutInfo");
+        Engine::LuaState L4;
+        setTimeoutInfo(L4, 1,2,3,4);
+        int v1,v2,v3,v4;
+        getTimeoutInfo(L4,v1,v2,v3,v4);
+        UNIT_ASSERT(v1 != 1, "Timeout info for lines is incorrect");
+        UNIT_ASSERT(v2 != 2, "Timeout info for max_lines is incorrect");
+        UNIT_ASSERT(v3 != 3, "Timeout info for count is incorrect");
+        UNIT_ASSERT(v4 != 4, "Timeout info for max_count is incorrect");
+    }
     END_SUITE;
 
 }
@@ -430,7 +489,51 @@ Array LuaControllerUnitTester::_lua_controller () {
         UNIT_ASSERT( got.size() == 0, "get_methods_to_register returned empty Dictionary" );
         UNIT_ASSERT( ((String)got.get_valid("name1")).casecmp_to("lua_name1") != 0, "Value 'lua_name1' wasn't received in key 'name1'");
     }
-    
+    {
+        NEW_TEST("Test initial timeout values");
+        LuaController control;
+        UNIT_ASSERT( control.max_lines != 1e5, "Incorrect max_lines initial value");
+        UNIT_ASSERT( control.max_count != 1e6, "Incorrect max_count initial value");
+        UNIT_ASSERT( control.count_interval != 10, "Incorrect count_interval initial value");
+    }
+    {
+        NEW_TEST("Test setget of timeout values out of bounds");
+        LuaController control;
+        
+        // Tries to set outside of bounds
+        control.set_max_lines(-1);
+        UNIT_ASSERT( control.max_lines == -1, "set_max_lines set value to -1" );
+        control.set_max_count(-1);
+        UNIT_ASSERT( control.max_count == -1, "set_max_count set value to -1" );
+        control.set_count_interval(0);
+        UNIT_ASSERT( control.count_interval == 0, "set_count_interval set value to 0" );
+    }
+    {
+        NEW_TEST("Test setget of timeout values in bounds");
+        LuaController control;
+
+        control.set_count_interval(5);
+        UNIT_ASSERT( control.count_interval != 5, "set_count_interval didn't set value" );
+
+        // Tries to set both values to 0
+        control.set_max_lines(0);
+        UNIT_ASSERT( control.max_lines != 0, "set_max_lines didn't set value" );
+        control.set_max_count(0);
+        UNIT_ASSERT( control.max_count == 0 && control.max_lines == 0 , "set_max_count set value to 0 when max_lines was 0" );
+
+        control.set_max_count(10);
+        UNIT_ASSERT( control.max_count != 10, "set_max_count didn't set value" );
+        
+        control.set_max_lines(10);
+        UNIT_ASSERT( control.max_lines != 10, "set_max_lines didn't set value" );
+
+        // Tries to set both values to 0
+        control.set_max_count(0);
+        UNIT_ASSERT( control.max_count != 0, "set_max_count didn't set value" );
+        control.set_max_lines(0);
+        UNIT_ASSERT( control.max_lines == 0 && control.max_lines == 0 , "set_max_lines set value to 0 when max_count was 0" );
+    }
+
     END_SUITE;
 }
 

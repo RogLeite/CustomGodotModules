@@ -2,7 +2,7 @@
  * @file LuaControllerContext.hpp
  * @author Rodrigo Leite (you@domain.com)
  * @brief Adaptation of the LuaController class from Jordan Vrtanoski's "LuaCpp" library
- * @version 0.2
+ * @version 1.0
  * @date 2021-11-19
  */
 
@@ -37,6 +37,7 @@
 #define LUACPP_LUACONTROLLERCONTEXT_HPP
 
 #include <memory>
+
 #include <LuaCpp.hpp>
 
 // Forward declaration necessary for friend declaration
@@ -44,8 +45,7 @@ class LuaControllerUnitTester;
 
 namespace LuaCpp {
 
-
-    enum CORE_LIBS_FLAGS {
+	enum CORE_LIBS_FLAGS {
 		LIB_NONE = 0,
 		LIB_BASE = 1,
 		LIB_COROUTINE = 2,
@@ -89,6 +89,24 @@ namespace LuaCpp {
 		 *	The values to load onto the context as global
 		 */
 		LuaEnvironment globalEnvironment;
+		/**
+		 * @brief The count of commands executed is incremented by 1 every
+		 * count_interval commands executed.
+		 */
+		int count_interval;
+
+		/**
+		 * @brief Maximum amount of lines executed
+		 * 
+		 * If max_lines is 0, the execution cannot timeout by line count.
+		 */
+		int max_lines;
+		/**
+		 * @brief Maximum amount of commands counted
+		 * 
+		 * If max_count is 0, the execution cannot timeout by command count.
+		 */
+		int max_count;
 
 	public:
 
@@ -100,7 +118,15 @@ namespace LuaCpp {
 		 * for the communication with the Lua virtual machine
 		 * from the high level APIs.
 		 */
-		LuaControllerContext() : registry(), libraries(), lua_core_libraries(LIB_ALL), globalEnvironment() {};
+		LuaControllerContext()
+		 : registry()
+		 , libraries()
+		 , lua_core_libraries(LIB_ALL)
+		 , globalEnvironment()
+		 , count_interval(10)
+		 , max_lines(1e5)
+		 , max_count(1e6)
+		 {};
 		~LuaControllerContext() {};
 
 		/**
@@ -289,6 +315,9 @@ namespace LuaCpp {
 		 * @details
 		 * Run a snippet that was previously compiled and stored in the registry
 		 * with a given environment (lua global variables)
+		 * 
+		 * Sets lua_Hook for LUA_HOOKCOUNT and LUA_HOOKLINE, if max_count or max_lines are defined
+		 * The hook serves as a timeout for the execution.
 		 *
 		 * @param name Name under which the snippet is registered
 		 * @param env Variables from this environment will be loaded as global 
@@ -348,6 +377,28 @@ namespace LuaCpp {
 		 * @brief Get the lua_core_libraries flags
 		 */
 		int getLuaCoreLibraries () const;
+
+		/**
+    	 * @brief Maximum amount of lines executed
+		 * 
+		 * @param maximum 
+		 */
+		void setMaxLines (int maximum);
+
+		/**
+  	   * @brief Maximum amount of commands counted
+		 * 
+		 * @param maximum 
+		 */
+		void setMaxCount (int maximum);
+
+		/**
+		 * @brief The count of commands executed is incremented by 1 every
+		 * count_interval commands executed.
+		 * 
+		 * @param interval 
+		 */
+		void setCountInterval (int interval);
 		
 	};
 
@@ -358,6 +409,22 @@ namespace LuaCpp {
 	 * @param lib_flags Bitwise OR of the flags from CORE_LIBS_FLAGS
 	 */
 	void openLibs (Engine::LuaState &L, int lib_flags);
+
+
+	/**
+	 * @brief The lua_Hook to be set on RunWhitEnvironment()
+	 * 
+	 * hook() increments counters (which ones depend on the LUA_MASK used) and calls luaL_error on L
+	 * if any one of them exceedes they're limit. If a limit is set to 0, it's counting is disabled.
+	 * 
+	 * @param L 
+	 * @param ar 
+	 */
+	void hook (lua_State *L, lua_Debug *ar);
+	
+	void setTimeoutInfo (lua_State *L, int lines, int max_lines, int count, int max_count);
+
+	void getTimeoutInfo (lua_State *L, int &lines, int &max_lines, int &count, int &max_count);
 }
 
 /**

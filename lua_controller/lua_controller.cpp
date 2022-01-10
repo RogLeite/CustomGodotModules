@@ -11,6 +11,12 @@ void LuaController::_bind_methods () {
     ClassDB::bind_method(D_METHOD("get_methods_to_register"), &LuaController::get_methods_to_register);
     ClassDB::bind_method(D_METHOD("set_lua_core_libs", "flags"), &LuaController::set_lua_core_libs);
     ClassDB::bind_method(D_METHOD("get_lua_core_libs"), &LuaController::get_lua_core_libs);
+    ClassDB::bind_method(D_METHOD("set_max_lines", "maximum"), &LuaController::set_max_lines);
+    ClassDB::bind_method(D_METHOD("get_max_lines"), &LuaController::get_max_lines);
+    ClassDB::bind_method(D_METHOD("set_max_count", "maximum"), &LuaController::set_max_count);
+    ClassDB::bind_method(D_METHOD("get_max_count"), &LuaController::get_max_count);
+    ClassDB::bind_method(D_METHOD("set_count_interval", "interval"), &LuaController::set_count_interval);
+    ClassDB::bind_method(D_METHOD("get_count_interval"), &LuaController::get_count_interval);
     
     ClassDB::add_virtual_method(get_class_static(),
         MethodInfo("lua_error_handler",
@@ -23,6 +29,11 @@ void LuaController::_bind_methods () {
     // Inspired by how Control's size flags are displayed
     ADD_GROUP("Core Libs", "lua_core_");
     ADD_PROPERTY(PropertyInfo(Variant::INT, "lua_core_libraries", PROPERTY_HINT_FLAGS, "base,coroutine,table,io,os,string,utf8,math,debug,package"), "set_lua_core_libs", "get_lua_core_libs");
+
+    ADD_GROUP("Timeout Configurations", "");
+    ADD_PROPERTY(PropertyInfo(Variant::INT, "max_lines", PROPERTY_HINT_RANGE, "0,10000,1,or_greater"), "set_max_lines", "get_max_lines");
+    ADD_PROPERTY(PropertyInfo(Variant::INT, "max_count", PROPERTY_HINT_RANGE, "0,100000,1,or_greater"), "set_max_count", "get_max_count");
+    ADD_PROPERTY(PropertyInfo(Variant::INT, "count_interval", PROPERTY_HINT_RANGE, "1,100,1,or_greater"), "set_count_interval", "get_count_interval");
 }
 
 
@@ -93,8 +104,13 @@ Error LuaController::run () {
 	    lua.Run("default");
 	}
     catch (std::runtime_error& e) {
-        error_message = String("[RUNTIME ERROR] : ")+String(e.what());
-        return ERR_SCRIPT_FAILED;
+        String what = e.what();
+        error_message = what;
+        // Chooses the error value given the received message
+        if (what.begins_with("[TIMEOUT]"))
+            return ERR_TIMEOUT;
+        else 
+            return ERR_SCRIPT_FAILED;
     }
 
     return OK;
@@ -138,6 +154,42 @@ int LuaController::get_lua_core_libs () const {
     return lua_core_libraries;
 }
 
+void LuaController::set_max_lines (int maximum) {
+    // Lower bound
+    ERR_FAIL_COND_MSG(maximum < 0, TTR("The value for maximum must be 0 or greater"));
+    // Both cannot be 0
+    ERR_FAIL_COND_MSG(maximum == 0 && max_count == 0, TTR("At least one counter for timeout must be enabled"));
+    max_lines = maximum;
+    lua.setMaxLines(maximum);
+}
+
+int LuaController::get_max_lines () const {
+    return max_lines;
+}
+
+void LuaController::set_max_count (int maximum) {
+    // Lower bound
+    ERR_FAIL_COND_MSG(maximum < 0, TTR("The value for maximum must be 0 or greater"));
+    // Both cannot be 0
+    ERR_FAIL_COND_MSG(maximum == 0 && max_lines == 0, TTR("At least one counter for timeout must be enabled"));
+    max_count = maximum;
+    lua.setMaxCount(maximum);
+}
+
+int LuaController::get_max_count () const {
+    return max_count;
+}
+
+void LuaController::set_count_interval (int interval) {
+    ERR_FAIL_COND_MSG(interval < 1, TTR("The value for interval must be 0 or greater"));
+    count_interval = interval;
+    lua.setCountInterval(interval);
+}
+
+int LuaController::get_count_interval () const {
+    return count_interval;
+}
+
 LuaController::LuaController () {
     // This follows Godot's code convention, which didn't use initializer list
     lua_code = "";
@@ -147,6 +199,9 @@ LuaController::LuaController () {
     prepare_callables();
     methods_to_register = Dictionary();
     lua_core_libraries = LuaCpp::LIB_ALL;
+    set_max_lines(1e5);
+    set_max_count(1e6);
+    set_count_interval(10);
     
     connect("script_changed", this, "prepare_callables");
 }

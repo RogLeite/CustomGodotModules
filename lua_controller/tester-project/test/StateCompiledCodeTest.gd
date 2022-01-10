@@ -33,3 +33,32 @@ func test_run_error():
 		.is_equal(ERR_SCRIPT_FAILED)
 	assert_that(ctrl.result).is_equal(0)
 
+func test_run_timeout():
+	ctrl.set_lua_code("""print(1)
+print(2)
+print(3)""")
+
+	# Tests lines timeout
+	ctrl.set_max_lines(2)
+	assert_int(ctrl.compile()) \
+		.is_equal(OK)
+	assert_int(ctrl.run()) \
+		.is_equal(ERR_TIMEOUT)
+	
+	assert_str(ctrl.get_error_message()) \
+		.starts_with("[TIMEOUT]") \
+		.contains("Exceeded line count")
+	
+	# Tests command timeout
+	ctrl.set_max_lines(1000)
+	ctrl.set_max_count(3)
+	ctrl.set_count_interval(1)
+	assert_int(ctrl.compile()) \
+		.is_equal(OK)
+	assert_int(ctrl.run()) \
+		.is_equal(ERR_TIMEOUT)
+	
+	assert_str(ctrl.get_error_message()) \
+		.starts_with("[TIMEOUT]") \
+		.contains("Exceeded command count")
+	

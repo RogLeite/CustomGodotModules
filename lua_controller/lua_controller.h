@@ -6,7 +6,7 @@
  * LuaController can interpret a String as Lua code. And, through the property method_to_register,
  * allows the user of the Node to choose which of LuaController's method can be invoked as a function
  * by the execution of the Lua code. The methods   
- * @version 0.6
+ * @version 1.0
  * @date 2021-11-19
  * 
  * @copyright Copyright (c) 2021
@@ -71,6 +71,34 @@ class LuaController : public Node {
      */
     int lua_core_libraries;
 
+    /**
+     * @brief Maximum amount of lines executed
+     * 
+     * If the execution of the code exceedes max_lines lines executed, LuaController 
+     * interrupts the execution and treats it as a TIMEOUT.
+     * 
+     * If max_lines is 0, the execution cannot timeout by line count.
+     */
+    int max_lines;
+    
+    /**
+     * @brief Maximum amount of commands counted
+     * 
+     * If the execution of the code exceedes max_count commands counted, LuaController 
+     * interrupts the execution and treats it as a TIMEOUT.
+     * 
+     * If max_count is 0, the execution cannot timeout by command count.
+     */
+    int max_count;
+    /**
+     * @brief The count of commands executed is incremented by 1 every
+     * count_interval commands executed.
+     * 
+     * If count_interval is more than 1, a timeout by command count means that 
+     * the true count of commands executed is max_count * count_interval.
+     */
+    int count_interval;
+
 protected:
     
     /**
@@ -123,12 +151,15 @@ public:
      * 
      * @return OK if the script ran successfully;
      * @return ERR_SCRIPT_FAILED if a runtime_error occured during the execution;
-     * @return \todo [TODO] ERR_TIMEOUT if the execution took to long to conclude
+     * @return ERR_TIMEOUT if the execution took to long to conclude
      * @return ERR_INVALID_DATA if `compilation_succeded` is false
      * 
      * @post 
      * If ERR_INVALID_DATA was returned, error_message contains the description 
      * of the error, prefixed with the string "[RUNTIME ERROR] : "
+     * @post 
+     * If ERR_TIMEOUT was returned, error_message contains the description 
+     * of the error, prefixed with the string "[TIMEOUT] : "
      * @post 
      * If ERR_SCRIPT_FAILED was returned, error_message contains the description 
      * of the error, prefixed with the string "[RUNTIME ERROR] : "
@@ -157,6 +188,33 @@ public:
      */
     void set_lua_core_libs (int flags);
     int get_lua_core_libs () const;
+
+    /**
+     * @brief Getter and Setter methods for max_lines
+     * 
+     * The lower bound is 0, included. 
+     * max_lines and max_count cannot both be 0 simultaneously 
+     * 
+     */
+    void set_max_lines (int maximum);
+    int get_max_lines () const;
+
+    /**
+     * @brief Getter and Setter methods for max_count
+     * 
+     * The lower bound is 0, included. 
+     * max_lines and max_count cannot both be 0 simultaneously 
+     */
+    void set_max_count (int maximum);
+    int get_max_count () const;
+
+    /**
+     * @brief Getter and Setter methods for count_interval
+     * 
+     * The lower bound is 1, included.
+     */
+    void set_count_interval (int interval);
+    int get_count_interval () const;
 
     /**
      * @brief Construct a new LuaController object

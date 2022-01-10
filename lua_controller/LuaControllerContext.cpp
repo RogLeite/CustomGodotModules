@@ -34,6 +34,10 @@
 
 #include <stdexcept>
 #include <iostream>
+#include <functional>
+
+#include <string>
+#include <sstream>
 
 #include "LuaControllerContext.hpp"
 
@@ -113,9 +117,32 @@ void LuaControllerContext::RunWithEnvironment(const std::string &name, const Lua
 		((std::shared_ptr<Engine::LuaType>) var.second)->PushGlobal(*L, var.first);
 	}
 
-	int res = lua_pcall(*L, 0, LUA_MULTRET, 0);
+	int mask = 0;
+	mask |= (max_lines != 0 ? LUA_MASKLINE : 0); // Checks if counts lines
+	mask |= (max_count != 0 ? LUA_MASKCOUNT : 0); // Checks if counts commands
+
+	// If no counting mask is defined, there is no need to set the hook
+	if (mask != 0) {
+		//std::cout << "hook mask is defined as: " << mask << std::endl;
+		
+		//std::cout << "call to lua_sethook()\n";
+		lua_sethook(*L, hook, mask, count_interval); 
+		//std::cout << "call to setTimeoutInfo(0, "<<max_lines<<", 0, "<<max_count<<")\n";
+		setTimeoutInfo(*L, 0, max_lines, 0, max_count);
+	}
+
+    int res = lua_pcall(*L, 0, LUA_MULTRET, 0);
+
+	int lines, max_l, count, max_c;
+	getTimeoutInfo(*L, lines, max_l, count, max_c);
+	//std::cout << "Total lines: " << lines << " with max = "<< max_l <<"\nTotal count: " << count << " with max = "<< max_c << std::endl;
+
 	if (res != LUA_OK ) {
-		throw std::runtime_error(lua_tostring(*L,1));
+		std::string message( lua_tostring(*L, 1) );
+		if ( message.find("[TIMEOUT]") == std::string::npos )
+			// If error message is not of a TIMEOUT, assembles a runtime_error message
+			message = std::string("[RUNTIME ERROR] : ") + message;
+		throw std::runtime_error(message);
 	}
 
 	for(const auto &var : env) {
@@ -142,6 +169,18 @@ void LuaControllerContext::setLuaCoreLibraries (int flags) {
 
 int LuaControllerContext::getLuaCoreLibraries () const {
 	return lua_core_libraries;
+}
+
+void LuaControllerContext::setMaxLines (int maximum) {
+	max_lines = maximum;
+}
+
+void LuaControllerContext::setMaxCount (int maximum) {
+	max_count = maximum;
+}
+
+void LuaControllerContext::setCountInterval (int interval) {
+	count_interval = interval;
 }
 
 /* Serviu de referência luaL_openlibs em linit.c, mas este código é só muito mais feio e hard-coded */
@@ -195,4 +234,102 @@ void openLibs (Engine::LuaState &L, int lib_flags) {
 	}
 }
 	
+void hook (lua_State *L, lua_Debug *ar) {
+
+	int lines, max_lines, count, max_count;
+    getTimeoutInfo(L, lines, max_lines, count, max_count);
+    
+
+	//std::cout << "Hook called with ar->event == ";
+	switch (ar->event)
+	{
+	case LUA_HOOKCOUNT:
+		//std::cout << "LUA_HOOKCOUNT\n";
+		count += 1;
+		break;
+	case LUA_HOOKLINE:
+		//std::cout << "LUA_HOOKLINE\n";
+		lines += 1;
+		break;
+	default:
+		//std::cout << "default case\n";
+		break;
+	}
+
+	bool cond_lines = max_lines > 0 && lines >= max_lines;
+	bool cond_count = max_count > 0 && count >= max_count;
+
+	if ( cond_lines ) {
+		//std::cout << "cond_lines was satisfied, jumping...\n";
+		luaL_error(L, "[TIMEOUT] : Exceeded line count. Counted %d, limit was %d", lines, max_lines);
+	}
+	if ( cond_count ) {
+		//std::cout << "cond_count was satisfied, jumping...\n";
+		luaL_error(L, "[TIMEOUT] : Exceeded command count. Counted %d, limit was %d", count, max_count);
+	}
+
+	//std::cout << "no condition was satisfied, won't throw error.\n";
+    setTimeoutInfo(L, lines, max_lines, count, max_count);
+
+}
+
+
+void setTimeoutInfo (lua_State *L, int lines, int max_lines, int count, int max_count) {
+	// std::cout << "entrou em setuptimeout\n";
+
+	lua_pushinteger(L, lines); // lines
+	// std::cout << "empurrou lines\n";
+	lua_setfield(L, LUA_REGISTRYINDEX, "lua_controller_timeout_lines");
+	// std::cout << "setfield para lines\n";
+
+	lua_pushinteger(L, max_lines); // lines
+	// std::cout << "empurrou max_lines\n";
+	lua_setfield(L, LUA_REGISTRYINDEX, "lua_controller_timeout_max_lines");
+	// std::cout << "setfield para max_lines\n";
+
+	lua_pushinteger(L, count); // count
+	// std::cout << "empurrou count\n";
+	lua_setfield(L, LUA_REGISTRYINDEX, "lua_controller_timeout_count");
+	// std::cout << "setfield para count\n";
+
+	lua_pushinteger(L, max_count); // max_count
+	// std::cout << "empurrou max_count\n";
+	lua_setfield(L, LUA_REGISTRYINDEX, "lua_controller_timeout_max_count");
+	// std::cout << "setfield para max_count\n";
+
+	// std::cout << "saindo de setuptimeout\n";
+}
+
+void getTimeoutInfo (lua_State *L, int &lines, int &max_lines, int &count, int &max_count) {
+	int pops = 0;
+	// std::cout << "Entrando em gettimeoutinfo\n";
+    
+    lua_getfield(L, LUA_REGISTRYINDEX, "lua_controller_timeout_lines");
+    // std::cout << "getfield para lines\n";
+    lines = lua_tointeger(L, -1);
+	pops++;
+    // std::cout << "tointeger para lines\n";
+
+    lua_getfield(L, LUA_REGISTRYINDEX, "lua_controller_timeout_max_lines");
+    // std::cout << "getfield para max_lines\n";
+    max_lines = lua_tointeger(L, -1);
+	pops++;
+    // std::cout << "tointeger para max_lines\n";
+    
+    lua_getfield(L, LUA_REGISTRYINDEX, "lua_controller_timeout_count");
+    // std::cout << "getfield para count\n";
+    count = lua_tointeger(L, -1);
+	pops++;
+    // std::cout << "tointeger para count\n";
+    
+    lua_getfield(L, LUA_REGISTRYINDEX, "lua_controller_timeout_max_count");
+    // std::cout << "getfield para max_count\n";
+    max_count = lua_tointeger(L, -1);
+	pops++;
+    // std::cout << "tointeger para max_count\n";
+
+    // pops every integer pushed
+    lua_pop(L, pops);
+}
+
 } /* namespace LuaCpp */

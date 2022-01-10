@@ -3,7 +3,7 @@
 [ext_resource path="res://RealScene/ScriptRunner.gd" type="Script" id=1]
 [ext_resource path="res://RealScene/SignalNoArgs.gd" type="Script" id=3]
 [ext_resource path="res://RealScene/AnimationPlayer.gd" type="Script" id=5]
-[ext_resource path="res://RealScene/LuaController.gd" type="Script" id=6]
+[ext_resource path="res://RealScene/LuaControllerScript.gd" type="Script" id=6]
 
 [sub_resource type="Animation" id=1]
 resource_name = "flow"
@@ -88,14 +88,27 @@ __meta__ = {
 "_edit_use_anchors_": false
 }
 
-[node name="Run" type="Button" parent="VBox"]
+[node name="Buttons" type="HBoxContainer" parent="VBox"]
 margin_top = 550.0
 margin_right = 510.0
 margin_bottom = 600.0
+
+[node name="Run1" type="Button" parent="VBox/Buttons"]
+margin_right = 253.0
+margin_bottom = 50.0
 rect_min_size = Vector2( 0, 50 )
 hint_tooltip = "Control+Enter to RUN"
 size_flags_horizontal = 3
-text = "RUN"
+text = "RUN1"
+
+[node name="Run2" type="Button" parent="VBox/Buttons"]
+margin_left = 257.0
+margin_right = 510.0
+margin_bottom = 50.0
+rect_min_size = Vector2( 0, 50 )
+hint_tooltip = "Control+Enter to RUN"
+size_flags_horizontal = 3
+text = "RUN2"
 
 [node name="LuaController" type="LuaController" parent="."]
 methods_to_register = {
@@ -103,8 +116,19 @@ methods_to_register = {
 lua_core_libraries = 0
 script = ExtResource( 6 )
 
+[node name="LuaController2" type="LuaController" parent="."]
+methods_to_register = {
+}
+lua_core_libraries = 0
+count_interval = 1
+script = ExtResource( 6 )
+
 [connection signal="animation_finished" from="VBox/ColorRect/AnimationPlayer" to="." method="_on_animation_finished"]
-[connection signal="pressed" from="VBox/Run" to="." method="_on_Run_pressed"]
+[connection signal="pressed" from="VBox/Buttons/Run1" to="." method="_run1"]
+[connection signal="pressed" from="VBox/Buttons/Run2" to="." method="_run2"]
 [connection signal="play_sig" from="LuaController" to="VBox/ColorRect/AnimationPlayer" method="_on_play_sig"]
 [connection signal="print_called" from="LuaController" to="." method="_on_print_called"]
 [connection signal="secret" from="LuaController" to="VBox/SignalNoArgs" method="_on_secret"]
+[connection signal="play_sig" from="LuaController2" to="VBox/ColorRect/AnimationPlayer" method="_on_play_sig"]
+[connection signal="print_called" from="LuaController2" to="." method="_on_print_called"]
+[connection signal="secret" from="LuaController2" to="VBox/SignalNoArgs" method="_on_secret"]

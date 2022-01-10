@@ -18,7 +18,6 @@ func test_lua_callable() -> void:
 	
 
 func test_lua_controller() -> void:
-	
 	assert_array(my_tester.lua_controller()).is_empty()
 	
 

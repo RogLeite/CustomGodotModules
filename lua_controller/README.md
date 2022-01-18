@@ -53,7 +53,7 @@ MYCFLAGS = -fPIC
  ```
  - Before launching Godot, inform it where the binary for the module is:
  ```
- export _LIBRARY_PATH=”<path-to-godot-root>/bin/”
+ export LD_LIBRARY_PATH=”<path-to-godot-root>/bin/”
  ```
  - Then run Godot's binary:
  ```

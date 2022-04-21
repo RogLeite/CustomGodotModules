@@ -58,6 +58,11 @@ std::unique_ptr<Engine::LuaState> LuaControllerContext::newState(const LuaEnviro
 	for(const auto &var : env) {
 		((std::shared_ptr<Engine::LuaType>) var.second)->PushGlobal(*L, var.first);
 	}
+	for(const auto &var : registryVariables) {
+		((std::shared_ptr<Engine::LuaType>) var.second)->PushValue(*L);
+		lua_setfield(*L, LUA_REGISTRYINDEX, var.first);
+		lua_pop(*L, 1);
+	}
 	lua_pushstring(*L, std::string(Version).c_str());
 	lua_setglobal(*L, "_luacppversion");
 
@@ -121,15 +126,12 @@ void LuaControllerContext::RunWithEnvironment(const std::string &name, const Lua
 	mask |= (max_lines != 0 ? LUA_MASKLINE : 0); // Checks if counts lines
 	mask |= (max_count != 0 ? LUA_MASKCOUNT : 0); // Checks if counts commands
 
-	// If no counting mask is defined, there is no need to set the hook
-	if (mask != 0) {
-		//std::cout << "hook mask is defined as: " << mask << std::endl;
+	//std::cout << "hook mask is defined as: " << mask << std::endl;
 		
-		//std::cout << "call to lua_sethook()\n";
-		lua_sethook(*L, hook, mask, count_interval); 
-		//std::cout << "call to setTimeoutInfo(0, "<<max_lines<<", 0, "<<max_count<<")\n";
-		setTimeoutInfo(*L, 0, max_lines, 0, max_count);
-	}
+	//std::cout << "call to lua_sethook()\n";
+	lua_sethook(*L, hook, mask, count_interval); 
+	//std::cout << "call to setTimeoutInfo(0, "<<max_lines<<", 0, "<<max_count<<")\n";
+	setTimeoutInfo(*L, 0, max_lines, 0, max_count);
 
     int res = lua_pcall(*L, 0, LUA_MULTRET, 0);
 
@@ -148,6 +150,11 @@ void LuaControllerContext::RunWithEnvironment(const std::string &name, const Lua
 	for(const auto &var : env) {
 		((std::shared_ptr<Engine::LuaType>) var.second)->PopGlobal(*L);
 	}
+	for(const auto &var : registryVariables) {
+		lua_getfield(*L, LUA_REGISTRYINDEX, var.first);
+		((std::shared_ptr<Engine::LuaType>) var.second)->PopValue(*L);
+		lua_pop(*L,1);
+	}
 
 }
 		
@@ -161,6 +168,14 @@ void LuaControllerContext::AddGlobalVariable(const std::string &name, std::share
 
 std::shared_ptr<Engine::LuaType> &LuaControllerContext::getGlobalVariable(const std::string &name) {
 	return globalEnvironment[name];
+}
+
+void LuaControllerContext::AddRegistryVariable(const std::string &name, std::shared_ptr<Engine::LuaType> var) {
+	registryVariables[name] = std::move(var);
+}
+
+std::shared_ptr<Engine::LuaType> &LuaControllerContext::getRegistryVariable(const std::string &name) {
+	return registryVariables[name];
 }
 
 void LuaControllerContext::setLuaCoreLibraries (int flags) {
@@ -271,6 +286,19 @@ void hook (lua_State *L, lua_Debug *ar) {
 	//std::cout << "no condition was satisfied, won't throw error.\n";
     setTimeoutInfo(L, lines, max_lines, count, max_count);
 
+	// Check if ForceStop was set to true
+    lua_getfield(L, LUA_REGISTRYINDEX, "lua_controller_get_force_stop");
+	int res = lua_pcall(L, 0, 1, 0);
+	if (res != LUA_OK) {
+		// Error when calling get_force_stop
+		std::string message = std::move(std::string(lua_tostring(L,-1)));
+		luaL_error(L, "[FAILED CALL] : Couldn't call function 'lua_controller_get_force_stop' from the registry. Error returned by pcall : %s", message.c_str());
+	}
+	bool force_stop = lua_toboolean(L,-1);
+	lua_pop(L, 1);
+	if (force_stop) {
+		luaL_error(L, "[INTERRUPTED] : Execution of the script was manualy interrupted")
+	}
 }
 
 

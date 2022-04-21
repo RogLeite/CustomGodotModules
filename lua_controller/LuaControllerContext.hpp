@@ -89,6 +89,11 @@ namespace LuaCpp {
 		 *	The values to load onto the context as global
 		 */
 		LuaEnvironment globalEnvironment;
+
+		/**
+		 *	The values to load onto the context under the registry's
+		 */
+		LuaEnvironment registryVariables;
 		/**
 		 * @brief The count of commands executed is incremented by 1 every
 		 * count_interval commands executed.
@@ -123,6 +128,7 @@ namespace LuaCpp {
 		 , libraries()
 		 , lua_core_libraries(LIB_ALL)
 		 , globalEnvironment()
+		 , registryVariables()
 		 , count_interval(10)
 		 , max_lines(1e5)
 		 , max_count(1e6)
@@ -365,6 +371,37 @@ namespace LuaCpp {
 		 * The shared pointer of the global variable
 		 */
 		std::shared_ptr<Engine::LuaType> &getGlobalVariable(const std::string &name);
+
+		/**
+		 * @brief Add a registry variable
+		 *
+		 * @details
+		 * Add registry variable. The variables will populate the
+		 * Registry of the LuaState before the state is returned
+		 * from the newState() and newStateFor() methods.
+		 *
+		 * The variables won't be accessible from the lua engine, 
+		 * but may be accessed with the pseudo-index 
+		 * LUA_REGISTRYINDEX under the registered name.
+		 *
+		 * @param name name of the registry variable
+		 * @param var the variable
+		 */
+		void AddRegistryVariable(const std::string &name, std::shared_ptr<Engine::LuaType> var);
+
+		/**
+		 * @brief Retrurns the shared pointer to a registry variable
+		 *
+		 * @details
+		 * Returns a shared pointer to the registry variable. The variable
+		 * should be reinterpreted as the proper type.
+		 *
+		 * @param name Name of the registry variable
+		 *
+		 * @returns
+		 * The shared pointer of the registry variable
+		 */
+		std::shared_ptr<Engine::LuaType> &getRegistryVariable(const std::string &name);
 
 		/**
 		 * @brief Set the lua_core_libraries flags

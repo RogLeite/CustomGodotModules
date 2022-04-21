@@ -17,6 +17,7 @@
 
 #include "scene/main/node.h" /* Base Class for LuaController */
 #include "core/ustring.h" /* To use Godot's String class */
+#include "core/os/mutex.h" /* To use Godot's Mutex class */
 
 #include <memory>
 #include <vector>
@@ -99,6 +100,29 @@ class LuaController : public Node {
      */
     int count_interval;
 
+    /**
+     * @brief When set to true forces execution of the script to stop
+     * 
+     * [TODO] escrever comentários que expliquem o comportamento que eu botar no final das contas
+     *  
+     */
+    bool force_stop;
+
+    /**
+     * @brief Protects the setget of force_stop
+     *  
+     */
+    Mutex force_stop_lock;
+
+    /**
+     * @brief LuaCallable to set_force_stop that will be stored in the registry of LuaState
+     */
+    std::shared_ptr<LuaCallable> registry_set_force_stop;
+    /**
+     * @brief LuaCallable to get_force_stop that will be stored in the registry of LuaState
+     */
+    std::shared_ptr<LuaCallable> registry_get_force_stop;
+    
 protected:
     
     /**
@@ -149,10 +173,11 @@ public:
      * 
      * Every element from member callables is placed in the LuaControllerContext.
      * 
-     * @return OK if the script ran successfully;
-     * @return ERR_SCRIPT_FAILED if a runtime_error occured during the execution;
+     * @return OK if the script ran successfully or was manualy interrupted with set_force_stop()
+     * @return ERR_SCRIPT_FAILED if a runtime_error occured during the execution
      * @return ERR_TIMEOUT if the execution took to long to conclude
      * @return ERR_INVALID_DATA if `compilation_succeded` is false
+     * @return FAILED if hook() failed to call get_force_stop
      * 
      * @post 
      * If ERR_INVALID_DATA was returned, error_message contains the description 
@@ -163,6 +188,9 @@ public:
      * @post 
      * If ERR_SCRIPT_FAILED was returned, error_message contains the description 
      * of the error, prefixed with the string "[RUNTIME ERROR] : "
+     * @post 
+     * If FAILED was returned, error_message contains the description 
+     * of the error, prefixed with the string "[FAILED CALL] : "
      */
     Error run ();
 
@@ -215,6 +243,17 @@ public:
      */
     void set_count_interval (int interval);
     int get_count_interval () const;
+
+    /**
+     * @brief Getter and Setter methods for force_stop
+     * 
+     * force_stop_lock is internally so that no race condition occurs 
+     * when these methods are called by different threads. force_stop_lock is 
+     * used for both set and get, so they are mutualy exlusive with themselves
+     * and each other.
+     */
+    void set_force_stop (bool force);
+    bool get_force_stop () const;
 
     /**
      * @brief Construct a new LuaController object

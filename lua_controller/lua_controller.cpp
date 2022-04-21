@@ -17,6 +17,8 @@ void LuaController::_bind_methods () {
     ClassDB::bind_method(D_METHOD("get_max_count"), &LuaController::get_max_count);
     ClassDB::bind_method(D_METHOD("set_count_interval", "interval"), &LuaController::set_count_interval);
     ClassDB::bind_method(D_METHOD("get_count_interval"), &LuaController::get_count_interval);
+    ClassDB::bind_method(D_METHOD("set_force_stop", "force"), &LuaController::set_force_stop);
+    ClassDB::bind_method(D_METHOD("get_force_stop"), &LuaController::get_force_stop);
     
     ClassDB::add_virtual_method(get_class_static(),
         MethodInfo("lua_error_handler",
@@ -64,10 +66,6 @@ void LuaController::prepare_callables() {
 	get_method_list(&method_list);
 
     callables.clear();
-
-    // If there are no methods to register, then the work is done
-    if (methods_to_register.empty())
-        return;
     
     // For every method in this object
     for (List<MethodInfo>::Element *E = method_list.front(); E; E = E->next()) {
@@ -84,6 +82,29 @@ void LuaController::prepare_callables() {
                     }
                 )
             );
+        // If it is, instead, set for `force_stop`, stores it in it's corresponding member
+        else if (method_name == "set_force_stop")
+            registry_set_force_stop = 
+                std::make_shared<LuaCallable>(
+                    get_instance_id(),
+                    E->get(),
+                    [=](Variant::CallError::Error err, String msg){
+                        if (this->has_method("lua_error_handler"))
+                            this->call("lua_error_handler", (int)err, msg);
+                    }
+                );
+        // If it is, instead, get for `force_stop`, stores it in it's corresponding member
+        else if (method_name == "get_force_stop")
+            registry_get_force_stop = 
+                std::make_shared<LuaCallable>(
+                    get_instance_id(),
+                    E->get(),
+                    [=](Variant::CallError::Error err, String msg){
+                        if (this->has_method("lua_error_handler"))
+                            this->call("lua_error_handler", (int)err, msg);
+                    }
+                );
+                
  	}
 }
 
@@ -100,6 +121,12 @@ Error LuaController::run () {
         lua.AddGlobalVariable(name_in_lua , callable);
     }
 
+    // Adds `force_stop`'s setgets as callables to the registry
+    lua.AddRegistryVariable("lua_controller_set_force_stop", registry_set_force_stop);
+    lua.AddRegistryVariable("lua_controller_get_force_stop", registry_get_force_stop);
+    // Starting value for `force_stop`
+    set_force_stop(false);
+
     try {
 	    lua.Run("default");
 	}
@@ -109,9 +136,16 @@ Error LuaController::run () {
         // Chooses the error value given the received message
         if (what.begins_with("[TIMEOUT]"))
             return ERR_TIMEOUT;
+        else if (what.begins_with("[INTERRUPTED]"))
+            return OK;
+        else if (what.begins_with("[FAILED CALL]"))
+            return FAILED;
         else 
             return ERR_SCRIPT_FAILED;
     }
+
+    // Resets `force_stop`
+    set_force_stop();
 
     return OK;
 }
@@ -188,6 +222,20 @@ void LuaController::set_count_interval (int interval) {
 
 int LuaController::get_count_interval () const {
     return count_interval;
+}
+
+void LuaController::set_force_stop (bool force) {
+    force_stop_lock.lock();
+    force_stop = force;
+    force_stop_lock.unlock();
+}
+
+bool LuaController::get_force_stop () const {
+    bool ret;
+    force_stop_lock.lock();
+    ret = force_stop;
+    force_stop_lock.unlock();
+    return ret;
 }
 
 LuaController::LuaController () {

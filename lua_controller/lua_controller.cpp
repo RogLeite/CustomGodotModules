@@ -145,7 +145,7 @@ Error LuaController::run () {
     }
 
     // Resets `force_stop`
-    set_force_stop();
+    set_force_stop(false);
 
     return OK;
 }

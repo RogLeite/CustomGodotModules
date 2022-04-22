@@ -60,7 +60,7 @@ std::unique_ptr<Engine::LuaState> LuaControllerContext::newState(const LuaEnviro
 	}
 	for(const auto &var : registryVariables) {
 		((std::shared_ptr<Engine::LuaType>) var.second)->PushValue(*L);
-		lua_setfield(*L, LUA_REGISTRYINDEX, var.first);
+		lua_setfield(*L, LUA_REGISTRYINDEX, var.first.c_str());
 		lua_pop(*L, 1);
 	}
 	lua_pushstring(*L, std::string(Version).c_str());
@@ -151,7 +151,7 @@ void LuaControllerContext::RunWithEnvironment(const std::string &name, const Lua
 		((std::shared_ptr<Engine::LuaType>) var.second)->PopGlobal(*L);
 	}
 	for(const auto &var : registryVariables) {
-		lua_getfield(*L, LUA_REGISTRYINDEX, var.first);
+		lua_getfield(*L, LUA_REGISTRYINDEX, var.first.c_str());
 		((std::shared_ptr<Engine::LuaType>) var.second)->PopValue(*L);
 		lua_pop(*L,1);
 	}
@@ -297,7 +297,7 @@ void hook (lua_State *L, lua_Debug *ar) {
 	bool force_stop = lua_toboolean(L,-1);
 	lua_pop(L, 1);
 	if (force_stop) {
-		luaL_error(L, "[INTERRUPTED] : Execution of the script was manualy interrupted")
+		luaL_error(L, "[INTERRUPTED] : Execution of the script was manualy interrupted");
 	}
 }
 

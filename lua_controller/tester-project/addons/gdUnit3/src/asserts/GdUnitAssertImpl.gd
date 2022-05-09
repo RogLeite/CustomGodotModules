@@ -22,7 +22,8 @@ static func _get_line_number() -> int:
 		if source.empty() \
 		 or source.ends_with("AssertImpl.gd") \
 		 or source.ends_with("GdUnitTestSuite.gd") \
-		 or source.ends_with("GdUnitSceneRunner.gd"):
+		 or source.ends_with("GdUnitSceneRunnerImpl.gd") \
+		 or source.ends_with("GdUnitAwaiter.gd"):
 			continue
 		return stack_info.get("line")
 	return -1
@@ -36,10 +37,11 @@ func _init(caller :Object, current, expect_result :int = EXPECT_SUCCESS):
 	GdAssertReports.reset_last_error_line_number()
 	_set_test_failure(false)
 	# we expect the test will fail
-	if expect_result == EXPECT_FAIL:
+	if expect_result == EXPECT_FAIL or GdAssertReports.is_expect_fail():
 		_expect_fail = true
 
 func _set_test_failure(failure :bool) -> void:
+	_is_failed = failure
 	if _caller.get_ref().has_meta(GD_TEST_FAILURE) and _caller.get_ref().get_meta(GD_TEST_FAILURE) == true:
 		return
 	_caller.get_ref().set_meta(GD_TEST_FAILURE, failure)
@@ -53,9 +55,9 @@ func __validate_value_type(value, type :int) -> bool:
 func report_success() -> GdUnitAssert:
 	return GdAssertReports.report_success(self)
 
-func report_error(error_message :String) -> GdUnitAssert:
+func report_error(error_message :String, failure_line_number: int = -1) -> GdUnitAssert:
 	_set_test_failure(true)
-	var line_number := _get_line_number()
+	var line_number := failure_line_number if failure_line_number != -1 else _get_line_number()
 	GdAssertReports.set_last_error_line_number(line_number)
 	if _custom_failure_message == null:
 		return GdAssertReports.report_error(error_message, self, line_number)
@@ -64,13 +66,17 @@ func report_error(error_message :String) -> GdUnitAssert:
 func test_fail():
 	return report_error(GdAssertMessages.error_not_implemented())
 
-func has_failure_message(expected :String):
+static func _normalize_bbcode(message :String) -> String:
 	var rtl := RichTextLabelExt.new()
-	rtl.setup_effects()
+	rtl._ready()
 	rtl.bbcode_enabled = true
-	rtl.parse_bbcode(_current_error_message)
-	var current_error := rtl.get_text()
+	rtl.parse_bbcode(message)
+	var normalized = rtl.get_text()
 	rtl.free()
+	return normalized
+
+func has_failure_message(expected :String):
+	var current_error := _normalize_bbcode(_current_error_message)
 	if current_error != expected:
 		_expect_fail = false
 		var diffs := GdObjects.string_diff(current_error, expected)
@@ -79,12 +85,7 @@ func has_failure_message(expected :String):
 	return self
 
 func starts_with_failure_message(expected :String):
-	var rtl := RichTextLabelExt.new()
-	rtl.setup_effects()
-	rtl.bbcode_enabled = true
-	rtl.parse_bbcode(_current_error_message)
-	var current_error := rtl.get_text()
-	rtl.free()
+	var current_error := _normalize_bbcode(_current_error_message)
 	if current_error.find(expected) != 0:
 		_expect_fail = false
 		var diffs := GdObjects.string_diff(current_error, expected)

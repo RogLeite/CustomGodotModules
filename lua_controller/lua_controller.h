@@ -101,23 +101,19 @@ class LuaController : public Node {
     int count_interval;
 
     /**
-     * @brief When set to true forces execution of the script to stop
+     * @brief When set to true forces execution of the script to stop. Default value is false
      * 
-     * [TODO] escrever comentários que expliquem o comportamento que eu botar no final das contas
-     *  
+     * When is set to true, the execution of the script is interrupted as soon as possible, either:
+     *  when the next line is entered, if only timeout by line count was defined;
+     *  or before the execution of the next "nth" command, if the timeout by command count was defined.
      */
     bool force_stop;
 
     /**
      * @brief Protects the setget of force_stop
-     *  
      */
     Mutex force_stop_lock;
 
-    /**
-     * @brief LuaCallable to set_force_stop that will be stored in the registry of LuaState
-     */
-    std::shared_ptr<LuaCallable> registry_set_force_stop;
     /**
      * @brief LuaCallable to get_force_stop that will be stored in the registry of LuaState
      */
@@ -181,16 +177,16 @@ public:
      * 
      * @post 
      * If ERR_INVALID_DATA was returned, error_message contains the description 
-     * of the error, prefixed with the string "[RUNTIME ERROR] : "
+     * of the error, containing the string "[RUNTIME ERROR] : "
      * @post 
      * If ERR_TIMEOUT was returned, error_message contains the description 
-     * of the error, prefixed with the string "[TIMEOUT] : "
+     * of the error, containing the string "[TIMEOUT] : "
      * @post 
      * If ERR_SCRIPT_FAILED was returned, error_message contains the description 
-     * of the error, prefixed with the string "[RUNTIME ERROR] : "
+     * of the error, containing the string "[RUNTIME ERROR] : "
      * @post 
      * If FAILED was returned, error_message contains the description 
-     * of the error, prefixed with the string "[FAILED CALL] : "
+     * of the error, containing the string "[FAILED CALL] : "
      */
     Error run ();
 

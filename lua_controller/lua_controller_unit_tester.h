@@ -44,6 +44,11 @@ class LuaControllerUnitTester : public Node {
      * Safe to call with fewer arguments
      */
     Variant _and (Variant arg1, Variant arg2);
+    
+    /**
+     * @brief Returns false
+     */
+    Variant LuaControllerUnitTester::_get_force_stop_false();
 
     /**
      * @brief Run unit tests for class LuaCallable.

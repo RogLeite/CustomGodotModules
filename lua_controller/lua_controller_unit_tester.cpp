@@ -2,6 +2,7 @@
 
 #include <map>
 #include <stdexcept>
+#include <memory>
 
 #include "core/array.h"
 
@@ -26,7 +27,8 @@
  */
 #define NEW_TEST(test_name) \
     test_count += 1;\
-    String error_msg(vformat("[FAILURE] %s @ TEST %d \'%s\' : ", func_name, test_count, test_name));
+    String error_msg(vformat("[FAILURE] %s @ TEST %d \'%s\' : ", func_name, test_count, test_name));/*  \
+    print_line(vformat("Starting test number %d : \"%s\"", test_count, test_name)); */
 
 /**
  * @brief 
@@ -69,6 +71,7 @@ void LuaControllerUnitTester::_bind_methods () {
     ClassDB::bind_method(D_METHOD("_not"), &LuaControllerUnitTester::_not);
     ClassDB::bind_method(D_METHOD("_not_unsafe"), &LuaControllerUnitTester::_not_unsafe);
     ClassDB::bind_method(D_METHOD("_and"), &LuaControllerUnitTester::_and);
+    ClassDB::bind_method(D_METHOD("_get_force_stop_false"), &LuaControllerUnitTester::_get_force_stop_false);
     ClassDB::bind_method(D_METHOD("lua_callable"), &LuaControllerUnitTester::_lua_callable);
     ClassDB::bind_method(D_METHOD("lua_controller_context"), &LuaControllerUnitTester::_lua_controller_context);
     ClassDB::bind_method(D_METHOD("lua_controller"), &LuaControllerUnitTester::_lua_controller);
@@ -86,6 +89,10 @@ Variant LuaControllerUnitTester::_not_unsafe (bool arg) {
 }
 Variant LuaControllerUnitTester::_and (Variant arg1, Variant arg2) {
     return arg_or_default(arg1, false) && arg_or_default(arg2, false);
+}
+
+Variant LuaControllerUnitTester::_get_force_stop_false () {
+    return false;
 }
 
 Array LuaControllerUnitTester::_lua_callable () {
@@ -312,6 +319,14 @@ Array LuaControllerUnitTester::_lua_controller_context () {
 
     using namespace LuaCpp;
 
+    // For ease of access
+    List<MethodInfo> method_list; 
+    get_method_list(&method_list);
+    std::map<String, MethodInfo> methods{};
+    for (List<MethodInfo>::Element *E = method_list.front(); E; E = E->next()) {
+        methods[E->get().name] = E->get();
+    }
+
     START_SUITE("lua_controller_context");
 
     {
@@ -384,32 +399,49 @@ Array LuaControllerUnitTester::_lua_controller_context () {
         ctx.setMaxCount(3);
         ctx.setCountInterval(1);
         ctx.CompileString("default", "a=1;a=a+1;a=a+1;a=a+1;", true);
+
+        // Adds dummy callbacks to `force_stop`
+        std::shared_ptr<LuaCallable> registry_get_force_stop = std::make_shared<LuaCallable>(
+                    get_instance_id(),
+                    methods["_get_force_stop_false"],
+                    [=](Variant::CallError::Error err, String msg){});
+        ctx.AddRegistryVariable(std::string("lua_controller_get_force_stop"), registry_get_force_stop);
+
         bool error_occured = false;
         try {
             ctx.Run("default");
         }
         catch (std::runtime_error& e) {
+            // print_line("\tRuntime error in first run");
             error_occured = true;
             String what = e.what();
             // Chooses the error value given the received message
-            UNIT_ASSERT(!what.begins_with("[TIMEOUT] : Exceeded command count"), "Error message for count timeout is incorrect");
+            UNIT_ASSERT(!what.begins_with("[TIMEOUT] : Exceeded command count"), vformat("Error message for count timeout is incorrect. Was \"%s\"", what));
         }
         UNIT_ASSERT(!error_occured, "No Error was thrown for count timeout");
         
+        // print_line("\tEnd of first run");
+
         ctx.setMaxLines(2);
         ctx.setMaxCount(0);
         ctx.CompileString("default", "a=1\na=a+1\na=a+1\na=a+1;", true);
+        
+        ctx.AddRegistryVariable(std::string("lua_controller_get_force_stop"), registry_get_force_stop);
+
         error_occured = false;
         try {
             ctx.Run("default");
         }
         catch (std::runtime_error& e) {
+            // print_line("\tRuntime error in second run");
             error_occured = true;
             String what = e.what();
             // Chooses the error value given the received message
-            UNIT_ASSERT(!what.begins_with("[TIMEOUT] : Exceeded line count"), "Error message for line timeout is incorrect");
+            UNIT_ASSERT(!what.begins_with("[TIMEOUT] : Exceeded line count"), vformat("Error message for line timeout is incorrect. Was \"%s\"", what));
         }
         UNIT_ASSERT(!error_occured, "No Error was thrown for line tieout");
+
+        // print_line("\tEnd of second run");
     }
     {
         NEW_TEST("Test set/getTimeoutInfo");
@@ -421,6 +453,19 @@ Array LuaControllerUnitTester::_lua_controller_context () {
         UNIT_ASSERT(v2 != 2, "Timeout info for max_lines is incorrect");
         UNIT_ASSERT(v3 != 3, "Timeout info for count is incorrect");
         UNIT_ASSERT(v4 != 4, "Timeout info for max_count is incorrect");
+    }
+    {
+        NEW_TEST("Test registryVariables initialization");
+        LuaControllerContext ctx;
+        UNIT_ASSERT(!ctx.registryVariables.empty(), "registryVariables was not initialized empty");
+    }
+    {
+        NEW_TEST("Test addRegistryVariable");
+        LuaControllerContext ctx;
+        std::string name = "FirstVar";
+        ctx.AddRegistryVariable(name, std::make_shared<LuaCpp::Engine::LuaTNumber>(1.1));
+        UNIT_ASSERT(ctx.registryVariables.empty(), "Variable not registered in registryVariables");
+        UNIT_ASSERT(ctx.registryVariables.find(name) == ctx.registryVariables.end(), "Cannot find the key of a registered variable")
     }
     END_SUITE;
 
@@ -533,7 +578,33 @@ Array LuaControllerUnitTester::_lua_controller () {
         control.set_max_lines(0);
         UNIT_ASSERT( control.max_lines == 0 && control.max_lines == 0 , "set_max_lines set value to 0 when max_count was 0" );
     }
-
+    {
+        NEW_TEST("Test initialization of force_stop");
+        LuaController control;
+        UNIT_ASSERT(control.force_stop, "force_stop initialized with true value");
+    }
+    {
+        NEW_TEST("Test setget of force_stop");
+        LuaController control;
+        UNIT_ASSERT(control.get_force_stop(), "get_force_stop returned true when false was expected");
+        control.set_force_stop(false);
+        UNIT_ASSERT(control.get_force_stop(), "get_force_stop returned true after set_force_stop(false) was called");
+        control.set_force_stop(true);
+        UNIT_ASSERT(!control.get_force_stop(), "get_force_stop returned false after set_force_stop(true) was called");        
+    }
+    {
+        NEW_TEST("Test force_stop_lock initialization");
+        LuaController control;
+        UNIT_ASSERT(control.force_stop_lock.try_lock() != OK, "force_stop_lock is busy when it should not be");
+    }
+    {
+        NEW_TEST("Test force_stop_lock usage");
+        LuaController control;
+        control.force_stop_lock.lock();
+        UNIT_ASSERT(control.force_stop_lock.try_lock() != OK, "force_stop_lock is busy after it was locked");
+        control.force_stop_lock.unlock();
+        UNIT_ASSERT(control.force_stop_lock.try_lock() != OK, "force_stop_lock is busy after it was unlocked");
+    }
     END_SUITE;
 }
 

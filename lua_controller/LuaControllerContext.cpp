@@ -58,9 +58,13 @@ std::unique_ptr<Engine::LuaState> LuaControllerContext::newState(const LuaEnviro
 	for(const auto &var : env) {
 		((std::shared_ptr<Engine::LuaType>) var.second)->PushGlobal(*L, var.first);
 	}
+	// std::cout << "em newState, começa loop sobre registryVariables\n";
 	for(const auto &var : registryVariables) {
+		// std::cout << "em newState, empurra a variável de registro: " << var.first<< std::endl;
 		((std::shared_ptr<Engine::LuaType>) var.second)->PushValue(*L);
-		lua_setfield(*L, LUA_REGISTRYINDEX, var.first.c_str());
+		std::string name = var.first;
+		// std::cout << "em newState, lua_set_field pra variável de registro: " << var.first<< std::endl;
+		lua_setfield(*L, LUA_REGISTRYINDEX, name.c_str());
 		lua_pop(*L, 1);
 	}
 	lua_pushstring(*L, std::string(Version).c_str());
@@ -112,7 +116,9 @@ void LuaControllerContext::CompileFileAndRun(const std::string &code) {
 }
 
 void LuaControllerContext::Run(const std::string &name) {
+	// std::cout << "Entering LuaControllerContext::Run()\n";
 	RunWithEnvironment(name, globalEnvironment);
+	// std::cout << "Leaving LuaControllerContext::Run()\n";
 }
 
 void LuaControllerContext::RunWithEnvironment(const std::string &name, const LuaEnvironment &env) {
@@ -126,36 +132,48 @@ void LuaControllerContext::RunWithEnvironment(const std::string &name, const Lua
 	mask |= (max_lines != 0 ? LUA_MASKLINE : 0); // Checks if counts lines
 	mask |= (max_count != 0 ? LUA_MASKCOUNT : 0); // Checks if counts commands
 
-	//std::cout << "hook mask is defined as: " << mask << std::endl;
+	// std::cout << "hook mask is defined as: " << mask << std::endl;
 		
-	//std::cout << "call to lua_sethook()\n";
+	// std::cout << "call to lua_sethook()\n";
 	lua_sethook(*L, hook, mask, count_interval); 
-	//std::cout << "call to setTimeoutInfo(0, "<<max_lines<<", 0, "<<max_count<<")\n";
+	// std::cout << "call to setTimeoutInfo(0, "<<max_lines<<", 0, "<<max_count<<")\n";
 	setTimeoutInfo(*L, 0, max_lines, 0, max_count);
 
+	// std::cout << "RunWithEnvironment: logo antes da lua_pcall\n";
     int res = lua_pcall(*L, 0, LUA_MULTRET, 0);
+	// std::cout << "RunWithEnvironment: logo depois da lua_pcall, res = "<<res<<std::endl;
 
 	int lines, max_l, count, max_c;
 	getTimeoutInfo(*L, lines, max_l, count, max_c);
-	//std::cout << "Total lines: " << lines << " with max = "<< max_l <<"\nTotal count: " << count << " with max = "<< max_c << std::endl;
+	// std::cout << "Total lines: " << lines << " with max = "<< max_l <<"\nTotal count: " << count << " with max = "<< max_c << std::endl;
 
 	if (res != LUA_OK ) {
-		std::string message( lua_tostring(*L, 1) );
-		if ( message.find("[TIMEOUT]") == std::string::npos )
-			// If error message is not of a TIMEOUT, assembles a runtime_error message
+		// std::cout << "Em RunWithEnvironment will call lua_tostring(L,-1)\n";
+		std::string message( lua_tostring(*L, -1) );
+		// std::cout << "Em RunWithEnvironment called lua_tostring(L,-1)\n";
+		if ( message.find("[TIMEOUT]") == std::string::npos
+			&& message.find("[FAILED CALL]") == std::string::npos
+			&& message.find("[INTERRUPTED]") == std::string::npos)
+			// If error message is not of a TIMEOUT, FAILED CALL, or INTERRUPTED,
+			//  assembles a runtime_error message
 			message = std::string("[RUNTIME ERROR] : ") + message;
+		// std::cout << "Em RunWithEnvironment will throw the message:"<<message<<std::endl;
 		throw std::runtime_error(message);
 	}
-
+	// std::cout << "Poping global variables\n";
 	for(const auto &var : env) {
 		((std::shared_ptr<Engine::LuaType>) var.second)->PopGlobal(*L);
 	}
+	// std::cout << "Poping registry variables\n";
 	for(const auto &var : registryVariables) {
-		lua_getfield(*L, LUA_REGISTRYINDEX, var.first.c_str());
+		std::string name = var.first;
+		// std::cout << "\tPoping registry variable named: "<<name<<std::endl;
+		lua_getfield(*L, LUA_REGISTRYINDEX, name.c_str());
 		((std::shared_ptr<Engine::LuaType>) var.second)->PopValue(*L);
 		lua_pop(*L,1);
 	}
-
+	// std::cout << "Leaving RunWithEnvironment\n";
+	return;
 }
 		
 void LuaControllerContext::AddLibrary(std::shared_ptr<Registry::LuaLibrary> &library) {
@@ -255,19 +273,19 @@ void hook (lua_State *L, lua_Debug *ar) {
     getTimeoutInfo(L, lines, max_lines, count, max_count);
     
 
-	//std::cout << "Hook called with ar->event == ";
+	// std::cout << "Hook called with ar->event == ";
 	switch (ar->event)
 	{
 	case LUA_HOOKCOUNT:
-		//std::cout << "LUA_HOOKCOUNT\n";
+		// std::cout << "LUA_HOOKCOUNT\n";
 		count += 1;
 		break;
 	case LUA_HOOKLINE:
-		//std::cout << "LUA_HOOKLINE\n";
+		// std::cout << "LUA_HOOKLINE\n";
 		lines += 1;
 		break;
 	default:
-		//std::cout << "default case\n";
+		// std::cout << "default case\n";
 		break;
 	}
 
@@ -275,28 +293,36 @@ void hook (lua_State *L, lua_Debug *ar) {
 	bool cond_count = max_count > 0 && count >= max_count;
 
 	if ( cond_lines ) {
-		//std::cout << "cond_lines was satisfied, jumping...\n";
+		// std::cout << "cond_lines was satisfied, jumping...\n";
 		luaL_error(L, "[TIMEOUT] : Exceeded line count. Counted %d, limit was %d", lines, max_lines);
 	}
 	if ( cond_count ) {
-		//std::cout << "cond_count was satisfied, jumping...\n";
+		// std::cout << "cond_count was satisfied, jumping...\n";
 		luaL_error(L, "[TIMEOUT] : Exceeded command count. Counted %d, limit was %d", count, max_count);
 	}
 
-	//std::cout << "no condition was satisfied, won't throw error.\n";
+	// std::cout << "no condition was satisfied, won't throw error.\n";
     setTimeoutInfo(L, lines, max_lines, count, max_count);
 
+	// std::cout << "No Hook, logo antes de lua_get_field pra callback de force_stop\n";
 	// Check if ForceStop was set to true
     lua_getfield(L, LUA_REGISTRYINDEX, "lua_controller_get_force_stop");
+	// std::cout << "No Hook, logo antes do lua_pcall pra callback de force_stop\n";
 	int res = lua_pcall(L, 0, 1, 0);
+	// std::cout << "No Hook, logo depois do lua_pcall pra callback de force_stop\n";
 	if (res != LUA_OK) {
 		// Error when calling get_force_stop
-		std::string message = std::move(std::string(lua_tostring(L,-1)));
+		// std::cout << "No Hook, no erro quando chama get_force_stop, logo antes de fazer lua_tostring()\n";
+		std::string message = lua_tostring(L,-1);
+		// std::cout << "No Hook, no erro quando chama get_force_stop, logo antes de lançar luaL_error()\n";
 		luaL_error(L, "[FAILED CALL] : Couldn't call function 'lua_controller_get_force_stop' from the registry. Error returned by pcall : %s", message.c_str());
 	}
+	// std::cout << "No Hook, logo antes do lua_toboolean()\n";
 	bool force_stop = lua_toboolean(L,-1);
+	// std::cout << "No Hook, valor recuperado de lua_toboolean() = "<<force_stop<<std::endl;
 	lua_pop(L, 1);
 	if (force_stop) {
+		// std::cout << "No Hook, quando force_stop é true, logo antes de lançar luaL_error()\n";
 		luaL_error(L, "[INTERRUPTED] : Execution of the script was manualy interrupted");
 	}
 }

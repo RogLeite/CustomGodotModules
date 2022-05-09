@@ -82,19 +82,8 @@ void LuaController::prepare_callables() {
                     }
                 )
             );
-        // If it is, instead, set for `force_stop`, stores it in it's corresponding member
-        else if (method_name == "set_force_stop")
-            registry_set_force_stop = 
-                std::make_shared<LuaCallable>(
-                    get_instance_id(),
-                    E->get(),
-                    [=](Variant::CallError::Error err, String msg){
-                        if (this->has_method("lua_error_handler"))
-                            this->call("lua_error_handler", (int)err, msg);
-                    }
-                );
         // If it is, instead, get for `force_stop`, stores it in it's corresponding member
-        else if (method_name == "get_force_stop")
+        else if (method_name.begins_with("get_force_stop"))
             registry_get_force_stop = 
                 std::make_shared<LuaCallable>(
                     get_instance_id(),
@@ -121,28 +110,35 @@ Error LuaController::run () {
         lua.AddGlobalVariable(name_in_lua , callable);
     }
 
-    // Adds `force_stop`'s setgets as callables to the registry
-    lua.AddRegistryVariable("lua_controller_set_force_stop", registry_set_force_stop);
-    lua.AddRegistryVariable("lua_controller_get_force_stop", registry_get_force_stop);
+    // Adds `force_stop`'s get as callables to the registry
+    lua.AddRegistryVariable(std::string("lua_controller_get_force_stop"), registry_get_force_stop);
     // Starting value for `force_stop`
     set_force_stop(false);
 
+    // std::cout << "@LuaController::run: logo antes de LuaControllerContext.run()\n";
+
     try {
+        // std::cout << "@LuaController::run : enter lua.Run()\n";
 	    lua.Run("default");
+        // std::cout << "@LuaController::run : left lua.Run()\n";
 	}
     catch (std::runtime_error& e) {
+        // std::cout << "@LuaController::run : caught error\n";
         String what = e.what();
+        // std::cout << "@LuaController::run: deu catch em erro de Run(). Mensagem de erro é \""<<what.c_str()<<"\"\n";
         error_message = what;
         // Chooses the error value given the received message
-        if (what.begins_with("[TIMEOUT]"))
+        if (what.find("[TIMEOUT]") != -1)
             return ERR_TIMEOUT;
-        else if (what.begins_with("[INTERRUPTED]"))
+        else if (what.find("[INTERRUPTED]") != -1)
             return OK;
-        else if (what.begins_with("[FAILED CALL]"))
+        else if (what.find("[FAILED CALL]") != -1)
             return FAILED;
         else 
             return ERR_SCRIPT_FAILED;
     }
+
+    // std::cout << "@LuaController::run: executou LuaControllerContext::run() sem captar erro\n";
 
     // Resets `force_stop`
     set_force_stop(false);
@@ -226,6 +222,7 @@ int LuaController::get_count_interval () const {
 
 void LuaController::set_force_stop (bool force) {
     force_stop_lock.lock();
+    // std::cout << "@LuaController::set_force_stop : set to "<<force<< std::endl;
     force_stop = force;
     force_stop_lock.unlock();
 }
@@ -234,6 +231,7 @@ bool LuaController::get_force_stop () const {
     bool ret;
     force_stop_lock.lock();
     ret = force_stop;
+    // std::cout << "@LuaController::set_force_stop : got force_stop as  "<<ret<< std::endl;
     force_stop_lock.unlock();
     return ret;
 }
@@ -250,6 +248,7 @@ LuaController::LuaController () {
     set_max_lines(1e5);
     set_max_count(1e6);
     set_count_interval(10);
+    force_stop = false;
     
     connect("script_changed", this, "prepare_callables");
 }

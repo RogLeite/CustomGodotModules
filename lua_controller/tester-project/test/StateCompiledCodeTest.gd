@@ -62,3 +62,37 @@ print(3)""")
 		.starts_with("[TIMEOUT]") \
 		.contains("Exceeded command count")
 	
+
+func test_run_timeout_in_function():
+	ctrl.set_lua_code("""function timeout() 
+		local x = 1
+		while true do x = x+1 end
+	end
+	timeout()""")
+
+	# Tests lines timeout
+	ctrl.set_max_lines(10)
+	assert_int(ctrl.compile()) \
+		.is_equal(OK)
+	assert_int(ctrl.run()) \
+		.is_equal(ERR_TIMEOUT)
+	
+	assert_str(ctrl.get_error_message()) \
+		.starts_with("[string") \
+		.contains("[TIMEOUT]") \
+		.contains("Exceeded line count")
+	
+	# Tests command timeout
+	ctrl.set_max_lines(1000)
+	ctrl.set_max_count(100)
+	ctrl.set_count_interval(1)
+	assert_int(ctrl.compile()) \
+		.is_equal(OK)
+	assert_int(ctrl.run()) \
+		.is_equal(ERR_TIMEOUT)
+	
+	assert_str(ctrl.get_error_message()) \
+		.starts_with("[string") \
+		.contains("[TIMEOUT]") \
+		.contains("Exceeded command count")
+	

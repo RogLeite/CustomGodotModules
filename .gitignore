@@ -8,3 +8,4 @@ docs/
 lua_controller/tester-project/reports/
 lua_controller/tester-project/.import/*
 lua_controller/tester-project/**.import
+*.import

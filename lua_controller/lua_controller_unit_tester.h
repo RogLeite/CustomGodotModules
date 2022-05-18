@@ -2,7 +2,7 @@
  * @file lua_controller_unit_tester.h
  * @author Rodrigo Leite (you@domain.com)
  * @brief LuaControllerUnitTester's methods run unit tests for each class in the LuaController module. 
- * @version 0.1
+ * @version 0.2
  * @date 2021-11-30
  * 
  * @copyright Copyright (c) 2021

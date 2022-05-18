@@ -141,15 +141,12 @@ void LuaControllerContext::RunWithEnvironment(const std::string &name, const Lua
 
 	// std::cout << "RunWithEnvironment: logo antes da lua_pcall\n";
     int res = lua_pcall(*L, 0, LUA_MULTRET, 0);
-	// std::cout << "RunWithEnvironment: logo depois da lua_pcall, res = "<<res<<std::endl;
-
-	int lines, max_l, count, max_c;
-	getTimeoutInfo(*L, lines, max_l, count, max_c);
-	// std::cout << "Total lines: " << lines << " with max = "<< max_l <<"\nTotal count: " << count << " with max = "<< max_c << std::endl;
+	// std::cout << "RunWithEnvironment: logo depois da lua_pcall, res = "<<res<<" | tamanho da pilha = "<< lua_gettop(*L)<<std::endl;
 
 	if (res != LUA_OK ) {
-		// std::cout << "Em RunWithEnvironment will call lua_tostring(L,-1)\n";
-		std::string message( lua_tostring(*L, -1) );
+		// std::cout << "Em RunWithEnvironment will call lua_tostring(L,-1) if lua_isstring()\n";
+		// [TODO] Check in a better way if there is no error message.
+		std::string message( lua_isstring(*L, -1) ? lua_tostring(*L, -1) : "[empty error message]" );
 		// std::cout << "Em RunWithEnvironment called lua_tostring(L,-1)\n";
 		if ( message.find("[TIMEOUT]") == std::string::npos
 			&& message.find("[FAILED CALL]") == std::string::npos

@@ -6,7 +6,7 @@
  * LuaController can interpret a String as Lua code. And, through the property method_to_register,
  * allows the user of the Node to choose which of LuaController's method can be invoked as a function
  * by the execution of the Lua code. The methods   
- * @version 1.0
+ * @version 1.1
  * @date 2021-11-19
  * 
  * @copyright Copyright (c) 2021

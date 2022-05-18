@@ -2,7 +2,7 @@
  * @file LuaControllerContext.hpp
  * @author Rodrigo Leite (you@domain.com)
  * @brief Adaptation of the LuaController class from Jordan Vrtanoski's "LuaCpp" library
- * @version 1.0
+ * @version 1.1
  * @date 2021-11-19
  */
 

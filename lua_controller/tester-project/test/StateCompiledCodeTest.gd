@@ -25,13 +25,25 @@ func test_run_ok():
 	assert_str(ctrl.get_error_message()).is_empty()
 	assert_that(ctrl.result).is_equal(2)
 
-func test_run_error():
+func test_run_error_with_message():
 	ctrl.set_lua_code("error(\"Just so I raise an error\")")
 	assert_int(ctrl.compile()) \
 		.is_equal(OK)
 	assert_int(ctrl.run()) \
 		.is_equal(ERR_SCRIPT_FAILED)
 	assert_that(ctrl.result).is_equal(0)
+	assert_str(ctrl.get_error_message()) \
+		.contains("Just so I raise an error")
+
+func test_run_error_no_message():
+	ctrl.set_lua_code("error()")
+	assert_int(ctrl.compile()) \
+		.is_equal(OK)
+	assert_int(ctrl.run()) \
+		.is_equal(ERR_SCRIPT_FAILED)
+	assert_that(ctrl.result).is_equal(0)
+	assert_str(ctrl.get_error_message()) \
+		.contains("[empty error message]")
 
 func test_run_timeout():
 	ctrl.set_lua_code("""print(1)

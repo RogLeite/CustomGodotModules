@@ -123,10 +123,11 @@ Error LuaController::run () {
         // std::cout << "@LuaController::run : left lua.Run()\n";
 	}
     catch (std::runtime_error& e) {
-        // std::cout << "@LuaController::run : caught error\n";
+        // std::cout << "@LuaController::run : caught error from Run()\n";
         String what = e.what();
-        // std::cout << "@LuaController::run: deu catch em erro de Run(). Mensagem de erro é \""<<what.c_str()<<"\"\n";
+        // std::cout << "@LuaController::run : caught error from Run(). Message is \""<<what.c_str()<<"\"\n";
         error_message = what;
+        // std::cout << "@LuaController::run: Trying to match a string to message\n";
         // Chooses the error value given the received message
         if (what.find("[TIMEOUT]") != -1)
             return ERR_TIMEOUT;
@@ -138,7 +139,7 @@ Error LuaController::run () {
             return ERR_SCRIPT_FAILED;
     }
 
-    // std::cout << "@LuaController::run: executou LuaControllerContext::run() sem captar erro\n";
+    // std::cout << "@LuaController::run: executed LuaControllerContext::run() without catching error\n";
 
     // Resets `force_stop`
     set_force_stop(false);
